@@ -8,20 +8,19 @@ import java.util.stream.Collectors;
  * @author Erwan IQUEL, Mathieu LE CLEC'H
  */
 public class ASD {
+    public static int level = 0;
 
     /**
      * Représentation sous forme de classe interne du Variant/Constructeur Program
      */
     static public class Program {
-        List<Variable> v;
-        Instruction i; // What a program contains. TODO : change when you extend the language
+        Bloc b;// What a program contains. TODO : change when you extend the language
 
         /**
          * Constructor
          */
-        public Program(List<Variable> v, Instruction i) {
-            this.v = v;
-            this.i = i;
+        public Program(Bloc b) {
+            this.b = b;
         }
 
         /**
@@ -29,13 +28,7 @@ public class ASD {
          * @return Représentation sous forme de chaine de caractère d'un programme VSL+
          */
         public String pp() {
-            String ret = "INT ";
-
-            for(Variable variable : v) {
-                ret += variable.pp() + ", ";
-            }
-
-            return ret + "\n" + i.pp();
+            return this.b.pp();
         }
 
         /**
@@ -45,29 +38,91 @@ public class ASD {
         public Llvm.IR toIR() throws TypeException {
             SymbolTable st = new SymbolTable();
             // TODO : change when you extend the language
-            Variable.RetVariable retVar = null;
 
-            for(Variable variable : v) {
-                if(retVar == null) retVar = variable.toIR(st);
-                else retVar.ir.append(variable.toIR(st).ir);
-            }
-
-            // computes the IR of the instruction
-            System.err.println(i);
-            Instruction.RetInstruction retInst = i.toIR(st);
-            retVar.ir.append(retInst.ir);
-            // add a return instruction
-            Llvm.Instruction ret = new Llvm.Return(new IntType().toLlvmType(), "0");//TODO: Modifier "0" par le resultat à renvoyer une fois le Load pris en compte
-            retVar.ir.appendCode(ret);
-
-            return retVar.ir;
+            return b.toIR(st);
         }
     }
 
     // TODO: All toIR methods returns the IR, plus extra information (synthesized attributes)
     // TODO: They can take extra arguments (inherited attributes)
 
+    /**
+     * Représentation sous forme de classe interne du Variant/Constructeur Program
+     */
+    static public class Bloc {
+        List<Variable> variables;
+        List<Instruction> instructions; // What a program contains. TODO : change when you extend the language
 
+        /**
+         * Constructor
+         */
+        public Bloc(List<Variable> variables, List<Instruction> instructions) {
+            this.variables = variables;
+            this.instructions = instructions;
+        }
+
+        /**
+         * Pretty-Printer
+         * @return Représentation sous forme de chaine de caractère d'un bloc VSL+
+         */
+        public String pp() {
+            String ret = Utils.indent(level) + "{\n";
+
+            level++;
+
+            ret += Utils.indent(level) + "INT ";
+
+            for(Variable variable : this.variables) {
+                ret += variable.pp() + ", ";
+            }
+
+            ret += "\n";
+
+            for(Instruction instruction : this.instructions) {
+                ret += Utils.indent(level) + instruction.pp() + "\n";
+            }
+
+            level--;
+
+            return ret + Utils.indent(level) + "\n}\n";
+        }
+
+        /**
+         * Générateur d'un ensemble d'instructions LLVM
+         * @return Ensemble d'instructions LLVM
+         */
+        public Llvm.IR toIR(SymbolTable st) throws TypeException {
+            SymbolTable scope = new SymbolTable(st);
+            Llvm.IR retIr = new Llvm.IR(Llvm.empty() , Llvm.empty());
+
+            Variable.RetVariable retVar = null;
+
+            for(Variable variable : this.variables) {
+                if(retVar == null) retVar = variable.toIR(scope);
+                else retVar.ir.append(variable.toIR(scope).ir);
+            }
+
+            if(retVar != null) retIr.append(retVar.ir);
+
+            // computes the IR of the instruction
+            Instruction.RetInstruction retInst = null;
+
+            for(Instruction instruction : this.instructions) {
+                if(retInst == null) retInst = instruction.toIR(scope);
+                else retInst.ir.append(instruction.toIR(scope).ir);
+            }
+
+            if(retInst != null) retIr.append(retInst.ir);
+
+            // add a return instruction
+            if(level == 0) {
+                Llvm.Instruction ret = new Llvm.Return(new IntType().toLlvmType(), "0");//TODO: Modifier "0" quand les retours seront pris en compte
+                retIr.appendCode(ret);
+            }
+
+            return retIr;
+        }
+    }
 
     /**
      * Représentation sous forme de classe interne du Variant Expression
@@ -381,7 +436,7 @@ public class ASD {
 
             RetExpression ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), identSymbol.type, result);
 
-            Llvm.Instruction store = new Llvm.Load(result, identSymbol.type.toLlvmType(), identSymbol.type.toLlvmType(), identSymbol.ident);
+            Llvm.Instruction store = new Llvm.Load(result, identSymbol.type.toLlvmType(), identSymbol.type.toLlvmType(), "%" + identSymbol.ident);
 
             ret.ir.appendCode(store);
 
@@ -510,11 +565,6 @@ public class ASD {
              * LLVM instruction
              */
             public Llvm.IR ir;
-
-            /**
-             * Type de l'instruction (synthetized)
-             */
-            public Type type;
 
             /**
              * Resultat de l'instruction (synthetized)
