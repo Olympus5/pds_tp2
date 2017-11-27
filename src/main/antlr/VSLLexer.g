@@ -27,6 +27,9 @@ TIMES : '*';
 DIV : '/';
 INT : 'INT';
 COMMA : ',';
+AFF : ':=';
+LCB : '{';
+RCB : '}';
 // TODO : other keywords
 
 // other tokens (no conflict with keywords in VSL)

@@ -113,6 +113,12 @@ public class Llvm {
         }
     }
 
+    static public class IntPtrType extends Type {
+        public String toString() {
+            return "i32*";
+        }
+    }
+
     // TODO : other types
 
 
@@ -122,7 +128,7 @@ public class Llvm {
     static public abstract class Instruction {
         /**
          * Convertis l'instruction LLVM sous forme de chaine de caractères
-         * @return L'instruction LLVM 
+         * @return L'instruction LLVM
          */
         public abstract String toString();
     }
@@ -312,6 +318,87 @@ public class Llvm {
         @Override
         public String toString() {
             return this.ident + " = alloca " + this.type + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Alloca sous la forme d'une classe interne
+     */
+    static public class Store extends Instruction {
+        /**
+         * Type de la valeur gauche
+         */
+        Type typeValue;
+
+        /**
+         * Valeur à affecter
+         */
+        String value;
+
+        /**
+         * Type de la variable d'affection
+         */
+        Type typePtr;
+
+        /**
+         * Variable d'affectation
+         */
+        String ptr;
+
+        /**
+         * Constructeur
+         */
+        public Store(Type typeValue, String value, Type typePtr, String ptr) {
+            this.typeValue = typeValue;
+            this.value = value;
+            this.typePtr = typePtr;
+            this.ptr = ptr;
+        }
+
+        @Override
+        public String toString() {
+            return "store " + this.typeValue + " " + this.value + ", " + this.typePtr + "* " + this.ptr + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Alloca sous la forme d'une classe interne
+     */
+    static public class Load extends Instruction {
+
+        /**
+         * Variable intermediaire
+         */
+        String lvalue;
+
+        /**
+        * Type de la variable intermediaire
+        */
+        Type typeLValue;
+
+        /**
+         * Type de la variable
+         */
+        Type typePtr;
+
+        /**
+         * Variable
+         */
+        String ptr;
+
+        /**
+         * Constructeur
+         */
+        public Load(String lvalue, Type typeLValue, Type typePtr, String ptr) {
+            this.lvalue = lvalue;
+            this.typeLValue = typeLValue;
+            this.typePtr = typePtr;
+            this.ptr = ptr;
+        }
+
+        @Override
+        public String toString() {
+            return this.lvalue + " = load " + this.typeLValue + ", " + this.typePtr + "* " + this.ptr + "\n";
         }
     }
 

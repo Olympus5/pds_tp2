@@ -19,13 +19,17 @@ program returns [ASD.Program out]
     : v=variable i=instruction EOF { $out = new ASD.Program($v.out, $i.out); } // TODO : change when you extend the language
     ;
 
-variable returns [List<ASD.Variable> out]
-    : { $out = new ArrayList<ASD.Variable>(); } (INT (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
-                                                    (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)?
+bloc returns [ASD.bloc out]
+    : v=variable i=instruction { $out = new ASD.Bloc($v.out, $i.out); }
     ;
 
-instruction returns [ASD.Instruction out]
-    : IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); }
+variable returns [List<ASD.Variable> out]
+    : { $out = new ArrayList<ASD.Variable>(); } (INT (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
+                                                    (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)*
+    ;
+
+instruction returns [List<ASD.Instruction> out]
+    : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); })*
     ;
 
 expression returns [ASD.Expression out]

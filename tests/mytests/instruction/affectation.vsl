@@ -1,0 +1,2 @@
+INT test
+test := 10 - 2 * 30

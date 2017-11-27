@@ -1,0 +1,2 @@
+INT test, test1
+test := 4 - test1 + 32
