@@ -16,7 +16,12 @@ options {
 // TODO : other rules
 
 program returns [ASD.Program out]
-    : e=expression EOF { $out = new ASD.Program($e.out); } // TODO : change when you extend the language
+    : v=variable e=expression EOF { $out = new ASD.Program($v.out, $e.out); } // TODO : change when you extend the language
+    ;
+
+variable returns [List<ASD.Variable> out]
+    : { $out = new ArrayList<ASD.Variable>(); } (INT (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
+                                                    (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)?
     ;
 
 expression returns [ASD.Expression out]

@@ -13,12 +13,14 @@ public class ASD {
      * Représentation sous forme de classe interne du Variant/Constructeur Program
      */
     static public class Program {
+        List<Variable> v;
         Expression e; // What a program contains. TODO : change when you extend the language
 
         /**
          * Constructor
          */
-        public Program(Expression e) {
+        public Program(List<Variable> v, Expression e) {
+            this.v = v;
             this.e = e;
         }
 
@@ -27,7 +29,13 @@ public class ASD {
          * @return Représentation sous forme de chaine de caractère d'un programme VSL+
          */
         public String pp() {
-            return e.pp();
+            String ret = "INT ";
+
+            for(Variable variable : v) {
+                ret += variable.pp() + ", ";
+            }
+
+            return ret + "\n" + e.pp();
         }
 
         /**
@@ -35,15 +43,23 @@ public class ASD {
          * @return Ensemble d'instructions LLVM
          */
         public Llvm.IR toIR() throws TypeException {
+            SymbolTable st = new SymbolTable();
             // TODO : change when you extend the language
+            Variable.RetVariable retVar = null;
+
+            for(Variable variable : v) {
+                if(retVar == null) retVar = variable.toIR(st);
+                else retVar.ir.append(variable.toIR(st).ir);
+            }
 
             // computes the IR of the expression
             Expression.RetExpression retExpr = e.toIR();
+            retVar.ir.append(retExpr.ir);
             // add a return instruction
             Llvm.Instruction ret = new Llvm.Return(retExpr.type.toLlvmType(), retExpr.result);
-            retExpr.ir.appendCode(ret);
+            retVar.ir.appendCode(ret);
 
-            return retExpr.ir;
+            return retVar.ir;
         }
     }
 
@@ -325,6 +341,101 @@ public class ASD {
             // Here we simply return an empty IR
             // the `result' of this expression is the integer itself (as string)
             return new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "" + value);
+        }
+    }
+
+    /**
+     * Représenation sous forme de classe interne du variant Variable
+     */
+    static public abstract class Variable {
+        String ident;
+
+        public Variable(String ident) {
+            if(ident.equals("return")) {
+                System.err.println("Warning: '"+ ident +"' is a reserved keyword.");
+            }
+
+            this.ident = ident;
+        }
+
+        /**
+         * Pretty-Printer
+         * @return Représentation sous forme de chaine de caractère d'une variable VSL+
+         */
+        public abstract String pp();
+
+        /**
+         * Générateur d'un ensemble d'instructions LLVM
+         * @return Ensemble d'instructions LLVM
+         */
+        public abstract RetVariable toIR(SymbolTable st) throws TypeException;
+
+        /**
+         * Représentation de l'état d'une instruction sous forme de classe interne
+         */
+        static public class RetVariable {
+            /**
+             * LLVM instruction
+             */
+            public Llvm.IR ir;
+
+            /**
+             * Type de la variable (synthesized)
+             */
+            public Type type;
+
+            /**
+             * Identifiant de la variable (synthesized)
+             */
+            public String result;
+
+            /**
+             * Constructeur
+             */
+            public RetVariable(Llvm.IR ir, Type type, String result) {
+                this.ir = ir;
+                this.type = type;
+                this.result = result;
+            }
+        }
+    }
+
+    /**
+     * Représenation sous forme de classe interne du Constructeur IntegerVariable
+     */
+    static public class IntegerVariable extends Variable {
+        /**
+         * Constructeur
+         */
+        public IntegerVariable(String ident) {
+            super(ident);
+        }
+
+        @Override
+        public String pp() {
+            return "" + super.ident;
+        }
+
+        @Override
+        public RetVariable toIR(SymbolTable st) {
+            SymbolTable.VariableSymbol symbol = new SymbolTable.VariableSymbol(new IntType(), super.ident);
+
+            if(!st.add(symbol)) {
+                System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable.");
+            }
+
+            String result = "%" + super.ident;
+
+            RetVariable ret = new RetVariable(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result);
+
+            Llvm.Instruction alloca = new Llvm.Alloca(new IntType().toLlvmType(), result);
+
+            ret.ir.appendCode(alloca);
+
+            //TODO: supprimer lors de la mise en production (rendu final)
+            if(!symbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+
+            return ret;
         }
     }
 

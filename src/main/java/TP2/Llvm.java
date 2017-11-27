@@ -1,7 +1,7 @@
 package TP2;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 // This file contains a simple LLVM IR representation
 // and methods to generate its string representation
@@ -24,6 +24,9 @@ public class Llvm {
          */
         List < Instruction > code;
 
+        /**
+         * Constructeur
+         */
         public IR(List < Instruction > header, List < Instruction > code) {
             this.header = header;
             this.code = code;
@@ -117,6 +120,10 @@ public class Llvm {
      * Représentation abstraite d'une instruction
      */
     static public abstract class Instruction {
+        /**
+         * Convertis l'instruction LLVM sous forme de chaine de caractères
+         * @return L'instruction LLVM 
+         */
         public abstract String toString();
     }
 
@@ -156,7 +163,7 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return lvalue + " = add " + type + " " + left + ", " + right + "\n";
+            return this.lvalue + " = add " + this.type + " " + this.left + ", " + this.right + "\n";
         }
     }
 
@@ -196,7 +203,7 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return lvalue + " = sub " + type + " " + left + ", " + right + "\n";
+            return this.lvalue + " = sub " + this.type + " " + this.left + ", " + this.right + "\n";
         }
     }
 
@@ -236,7 +243,7 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return lvalue + " = mul " + type + " " + left + ", " + right + "\n";
+            return this.lvalue + " = mul " + this.type + " " + this.left + ", " + this.right + "\n";
         }
     }
 
@@ -276,7 +283,35 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return lvalue + " = udiv " + type + " " + left + ", " + right + "\n";
+            return this.lvalue + " = udiv " + this.type + " " + this.left + ", " + this.right + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Alloca sous la forme d'une classe interne
+     */
+    static public class Alloca extends Instruction {
+        /**
+         * Type de la variable
+         */
+        Type type;
+
+        /**
+         * Nom de la variable
+         */
+        String ident;
+
+        /**
+         * Constructeur
+         */
+        public Alloca(Type type, String ident) {
+            this.type = type;
+            this.ident = ident;
+        }
+
+        @Override
+        public String toString() {
+            return this.ident + " = alloca " + this.type + "\n";
         }
     }
 
