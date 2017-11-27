@@ -202,6 +202,102 @@ public class ASD {
         }
     }
 
+    /**
+     * Représentation sous forme de classe interne du Constructeur MulExpression
+     */
+    static public class MulExpression extends Expression {
+        /**
+         * Expression gauche
+         */
+        Expression left;
+
+        /**
+         * Expression droite
+         */
+        Expression right;
+
+        /**
+         * Constructeur
+         */
+        public MulExpression(Expression left, Expression right) {
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        public String pp() {
+            return "(" + left.pp() + " * " + right.pp() + ")";
+        }
+
+        @Override
+        public RetExpression toIR() throws TypeException {
+            RetExpression leftRet = left.toIR();
+            RetExpression rightRet = right.toIR();
+
+            if (!leftRet.type.equals(rightRet.type)) {
+                throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
+            }
+
+            leftRet.ir.append(rightRet.ir);
+
+            String result = Utils.newtmp();
+
+            Llvm.Instruction mul = new Llvm.Mul(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
+
+            leftRet.ir.appendCode(mul);
+
+            return new RetExpression(leftRet.ir, leftRet.type, result);
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur DivExpression
+     */
+    static public class DivExpression extends Expression {
+        /**
+         * Expression gauche
+         */
+        Expression left;
+
+        /**
+         * Expression droite
+         */
+        Expression right;
+
+        /**
+         * Constructeur
+         */
+        public DivExpression(Expression left, Expression right) {
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        public String pp() {
+            return "(" + left.pp() + " / " + right.pp() + ")";
+        }
+
+        @Override
+        public RetExpression toIR() throws TypeException {
+            RetExpression leftRet = left.toIR();
+            RetExpression rightRet = right.toIR();
+
+            if (!leftRet.type.equals(rightRet.type)) {
+                throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
+            }
+
+            leftRet.ir.append(rightRet.ir);
+
+            String result = Utils.newtmp();
+
+            Llvm.Instruction div = new Llvm.Div(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
+
+            leftRet.ir.appendCode(div);
+
+            return new RetExpression(leftRet.ir, leftRet.type, result);
+        }
+    }
+
     // Concrete class for Expression: constant (integer) case
     /**
      * Représentation sous forme de classe interne du Constructeur IntegerExpression

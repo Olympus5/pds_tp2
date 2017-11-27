@@ -21,13 +21,10 @@ fragment ASCII  : ~('\n'|'"');
 // keywords
 LP    : '(' ; // Left parenthesis
 RP    : ')' ;
-PLUS      : '+'      ;
-FUNC : 'FUNC';
-INT : 'INT';
-LCB : '{';
-RCB : '}';
-PRINT : 'PRINT';
-
+PLUS      : '+';
+MINUS : '-';
+TIMES : '*';
+DIV : '/';
 // TODO : other keywords
 
 // other tokens (no conflict with keywords in VSL)

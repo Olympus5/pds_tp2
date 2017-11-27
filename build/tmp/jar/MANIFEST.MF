@@ -1,0 +1,18 @@
+Manifest-Version: 1.0
+Class-Path: /home/erwan/.gradle/caches/modules-2/files-2.1/org.antlr/a
+ ntlr4/4.7/cd6df46532bccabd8127c18c9ca5ef481962e931/antlr4-4.7.jar /ho
+ me/erwan/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/
+ 4.7/30b13b7efc55b7feea667691509cf59902375001/antlr4-runtime-4.7.jar /
+ home/erwan/.gradle/caches/modules-2/files-2.1/org.antlr/ST4/4.0.8/a1c
+ 55e974f8a94d78e2348fa6ff63f4fa1fae64/ST4-4.0.8.jar /home/erwan/.gradl
+ e/caches/modules-2/files-2.1/org.antlr/antlr-runtime/3.5.2/cd9cd41361
+ c155f3af0f653009dcecb08d8b4afd/antlr-runtime-3.5.2.jar /home/erwan/.g
+ radle/caches/modules-2/files-2.1/org.abego.treelayout/org.abego.treel
+ ayout.core/1.0.3/457216e8e6578099ae63667bb1e4439235892028/org.abego.t
+ reelayout.core-1.0.3.jar /home/erwan/.gradle/caches/modules-2/files-2
+ .1/org.glassfish/javax.json/1.0.4/3178f73569fd7a1e5ffc464e680f7a8cc78
+ 4b85a/javax.json-1.0.4.jar /home/erwan/.gradle/caches/modules-2/files
+ -2.1/com.ibm.icu/icu4j/58.2/db9fd4b4c189cf1518db14c67d14a2cfcfbe59f6/
+ icu4j-58.2.jar
+Main-Class: TP2.Main
+

@@ -161,6 +161,126 @@ public class Llvm {
     }
 
     /**
+     * Représentation de l'instruction Sub sous forme de la classe interne
+     */
+    static public class Sub extends Instruction {
+        /**
+         * Type de la soustraction
+         */
+        Type type;
+
+        /**
+         * Partie gauche de la soustraction
+         */
+        String left;
+
+        /**
+         * Partie droite de la soustraction
+         */
+        String right;
+
+        /**
+         * Résultat de la soustraction
+         */
+        String lvalue;
+
+        /**
+         * Constructeur
+         */
+        public Sub(Type type, String left, String right, String lvalue) {
+            this.type = type;
+            this.left = left;
+            this.right = right;
+            this.lvalue = lvalue;
+        }
+
+        @Override
+        public String toString() {
+            return lvalue + " = sub " + type + " " + left + ", " + right + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Mul sous forme de la classe interne
+     */
+    static public class Mul extends Instruction {
+        /**
+         * Type de la multiplication
+         */
+        Type type;
+
+        /**
+         * Partie gauche de la multiplication
+         */
+        String left;
+
+        /**
+         * Partie droite de la multiplication
+         */
+        String right;
+
+        /**
+         * Résultat de la multiplication
+         */
+        String lvalue;
+
+        /**
+         * Constructeur
+         */
+        public Mul(Type type, String left, String right, String lvalue) {
+            this.type = type;
+            this.left = left;
+            this.right = right;
+            this.lvalue = lvalue;
+        }
+
+        @Override
+        public String toString() {
+            return lvalue + " = mul " + type + " " + left + ", " + right + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Div sous forme de la classe interne
+     */
+    static public class Div extends Instruction {
+        /**
+         * Type de la division
+         */
+        Type type;
+
+        /**
+         * Partie gauche de la division
+         */
+        String left;
+
+        /**
+         * Partie droite de la division
+         */
+        String right;
+
+        /**
+         * Résultat de la division
+         */
+        String lvalue;
+
+        /**
+         * Constructeur
+         */
+        public Div(Type type, String left, String right, String lvalue) {
+            this.type = type;
+            this.left = left;
+            this.right = right;
+            this.lvalue = lvalue;
+        }
+
+        @Override
+        public String toString() {
+            return lvalue + " = udiv " + type + " " + left + ", " + right + "\n";
+        }
+    }
+
+    /**
      * Représentation de l'instruction Return sous forme de la classe interne
      */
     static public class Return extends Instruction {
