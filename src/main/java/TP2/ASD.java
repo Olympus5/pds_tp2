@@ -1,7 +1,7 @@
 package TP2;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -617,16 +617,108 @@ public class ASD {
                 System.exit(0);
             }
 
+            Expression.RetExpression retExpr = expression.toIR(st);
+
+            if (!identSymbol.type.equals(retExpr.type)) {
+                throw new TypeException("type mismatch: have " + identSymbol.type + " and " + retExpr.type);
+            }
+
             String result = "%" + identSymbol.ident;
 
             RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), result);
-            Expression.RetExpression retExpr = expression.toIR(st);
 
             ret.ir.append(retExpr.ir);
 
             Llvm.Instruction store = new Llvm.Store(retExpr.type.toLlvmType(), retExpr.result, identSymbol.type.toLlvmType(), result);
 
             ret.ir.appendCode(store);
+
+            return ret;
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur IfElseInstruction
+     */
+    static public class IfElseInstruction extends Instruction {
+        /**
+         * Condition
+         */
+        Expression expression;
+
+        /**
+         * Bloc du if
+         */
+        Bloc bloc1;
+
+        /**
+         * Bloc du else
+         */
+        Bloc bloc2;
+
+        /**
+         * Constructeur
+         */
+        public IfElseInstruction(Expression expression, Bloc bloc1, Bloc bloc2) {
+            this.expression = expression;
+            this.bloc1 = bloc1;
+            this.bloc2 = bloc2;
+        }
+
+        @Override
+        public String pp() {
+            String ret = Utils.indent(level) + "IF " + this.expression.pp() + "\n";
+            ret += Utils.indent(level) + "THEN\n";
+            ret += this.bloc1.pp();
+
+            if(bloc2 != null) {//Si il y a un else
+                ret += Utils.indent(level) + "ELSE\n";
+                ret += this.bloc2.pp();
+            }
+
+            return ret + "\nFI";
+        }
+
+        @Override
+        public RetInstruction toIR(SymbolTable st) throws TypeException {
+            Expression.RetExpression cond = this.expression.toIR(st);
+
+            if (!cond.type.equals(new IntType())) {
+                throw new TypeException("type mismatch: have " + cond.type + " and " + new IntType());
+            }
+
+            String result = Utils.newtmp();
+            String si = Utils.newlab("if");
+            String sinon = Utils.newlab("else");
+            String finsi = Utils.newlab("fi");
+
+            Llvm.Instruction icmp = new Llvm.Icmp(result, cond.type.toLlvmType(), cond.result);
+            Llvm.Instruction brCond = null;
+
+            if(this.bloc2 != null) {//Si il y a un else
+                brCond = new Llvm.BrCond(result, "%" + si, "%" + sinon);
+            } else {
+                brCond = new Llvm.BrCond(result, "%" + si, "%" + finsi);
+            }
+
+            Llvm.Instruction brUncond = new Llvm.BrUncond("%" + finsi);
+
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), result);
+
+            ret.ir.append(cond.ir);
+            ret.ir.appendCode(icmp);
+            ret.ir.appendCode(brCond);
+            ret.ir.appendCode(new Llvm.Label(si));
+            ret.ir.append(this.bloc1.toIR(st));
+            ret.ir.appendCode(brUncond);
+
+            if(this.bloc2 != null) {//Si il y a un else
+                ret.ir.appendCode(new Llvm.Label(sinon));
+                ret.ir.append(this.bloc2.toIR(st));
+                ret.ir.appendCode(brUncond);
+            }
+
+            ret.ir.appendCode(new Llvm.Label(finsi));
 
             return ret;
         }

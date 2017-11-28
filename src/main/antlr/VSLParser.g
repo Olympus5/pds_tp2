@@ -26,11 +26,13 @@ bloc returns [ASD.Bloc out]
 
 variable returns [List<ASD.Variable> out]
     : { $out = new ArrayList<ASD.Variable>(); } (INT (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
-                                                    (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)*
+                                                     (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)*
     ;
 
 instruction returns [List<ASD.Instruction> out]
-    : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); })*
+    : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }
+                                                    | IF e=expression THEN b=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b.out, null)); }
+                                                    | IF e=expression THEN b1=bloc ELSE b2=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); })*
     ;
 
 expression returns [ASD.Expression out]

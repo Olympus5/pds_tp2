@@ -30,6 +30,10 @@ COMMA : ',';
 AFF : ':=';
 LCB : '{';
 RCB : '}';
+IF : 'IF';
+THEN : 'THEN';
+ELSE : 'ELSE';
+FI : 'FI';
 // TODO : other keywords
 
 // other tokens (no conflict with keywords in VSL)

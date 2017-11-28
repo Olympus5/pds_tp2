@@ -403,6 +403,118 @@ public class Llvm {
     }
 
     /**
+     * Représentation de l'instruction Icmp sous la forme d'une classe interne
+     */
+    static public class Icmp extends Instruction {
+        /**
+         * Resultat de la comparaison
+         */
+        String lvalue;
+
+        /**
+         * Type de la comparaison
+         */
+        Type type;
+
+        /**
+         * Valeur à comparer à 0
+         */
+        String op;
+
+        /**
+         * Constructeur
+         */
+        public Icmp(String lvalue, Type type, String op) {
+            this.lvalue = lvalue;
+            this.type = type;
+            this.op = op;
+        }
+
+        @Override
+        public String toString() {
+            return this.lvalue + " = icmp ne " + this.type + " " + this.op + ", 0\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Br (conditionel) sous forme de classe interne
+     */
+    static public class BrCond extends Instruction {
+        /**
+         * Condition de branchement
+         */
+        String cond;
+
+        /**
+         * Label si cond est vrai
+         */
+        String si;
+
+        /**
+         * Label si cond est faux
+         */
+        String sinon;
+
+
+        /**
+         * Constructeur
+         */
+        public BrCond(String cond, String si, String sinon) {
+            this.cond = cond;
+            this.si = si;
+            this.sinon = sinon;
+        }
+
+        @Override
+        public String toString() {
+            return "br i1 " + this.cond + ", label " + this.si + ", label " + this.sinon + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Br (inconditionnel) sous forme de classe interne
+     */
+    static public class BrUncond extends Instruction {
+        /**
+         * Nom du label où on se branche
+         */
+        String label;
+
+        /**
+         * Constructeur
+         */
+        public BrUncond(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return "br label " + label + "\n";
+        }
+    }
+
+    /**
+     * Représentation de la création de Label sous forme de classe interne
+     */
+    static public class Label extends Instruction {
+        /**
+         * Nom du label
+         */
+        String name;
+
+        /**
+         * Constructeur
+         */
+        public Label(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return this.name + ": \n";
+        }
+    }
+    /**
      * Représentation de l'instruction Return sous forme de la classe interne
      */
     static public class Return extends Instruction {

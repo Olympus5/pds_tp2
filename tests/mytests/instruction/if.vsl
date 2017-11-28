@@ -1,0 +1,7 @@
+INT test
+IF test - 1
+THEN
+    test := 2
+    test := test + 1
+    test := 2 - (3 + test)
+FI
