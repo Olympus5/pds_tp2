@@ -32,7 +32,8 @@ variable returns [List<ASD.Variable> out]
 instruction returns [List<ASD.Instruction> out]
     : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }
                                                     | IF e=expression THEN b=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b.out, null)); }
-                                                    | IF e=expression THEN b1=bloc ELSE b2=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); })*
+                                                    | IF e=expression THEN b1=bloc ELSE b2=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); }
+                                                    | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); })*
     ;
 
 expression returns [ASD.Expression out]

@@ -676,7 +676,7 @@ public class ASD {
                 ret += this.bloc2.pp();
             }
 
-            return ret + "\nFI";
+            return ret + Utils.indent(level) + "\nFI";
         }
 
         @Override
@@ -723,6 +723,72 @@ public class ASD {
             return ret;
         }
     }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur WhileInstruction
+     */
+    static public class WhileInstruction extends Instruction {
+        /**
+         * Condition
+         */
+        Expression expression;
+
+        /**
+         * Bloc de la boucle
+         */
+        Bloc bloc;
+
+        /**
+         * Constructeur
+         */
+        public WhileInstruction(Expression expression, Bloc bloc) {
+            this.expression = expression;
+            this.bloc = bloc;
+        }
+
+        @Override
+        public String pp() {
+            String ret = Utils.indent(level) + "WHILE " + this.expression.pp() + "\n";
+
+            ret += Utils.indent(level) + "DO\n";
+            ret += this.bloc.pp();
+
+            return ret + Utils.indent(level) + "DONE\n";
+        }
+
+        @Override
+        public RetInstruction toIR(SymbolTable st) throws TypeException {
+            Expression.RetExpression cond = this.expression.toIR(st);
+
+            if (!cond.type.equals(new IntType())) {
+                throw new TypeException("type mismatch: have " + cond.type + " and " + new IntType());
+            }
+
+            String result = Utils.newtmp();
+            String tantque = Utils.newlab("while");
+            String faire = Utils.newlab("do");
+            String fait = Utils.newlab("done");
+
+            Llvm.Instruction icmp = new Llvm.Icmp(result, cond.type.toLlvmType(), cond.result);
+            Llvm.Instruction brCond = new Llvm.BrCond(result, "%" + faire, "%" + fait);
+            Llvm.Instruction brUncond = new Llvm.BrUncond("%" + tantque);
+
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), result);
+
+            ret.ir.appendCode(brUncond);
+            ret.ir.appendCode(new Llvm.Label(tantque));
+            ret.ir.append(cond.ir);
+            ret.ir.appendCode(icmp);
+            ret.ir.appendCode(brCond);
+            ret.ir.appendCode(new Llvm.Label(faire));
+            ret.ir.append(this.bloc.toIR(st));
+            ret.ir.appendCode(brUncond);
+            ret.ir.appendCode(new Llvm.Label(fait));
+
+            return ret;
+        }
+    }
+
 
     /**
      * Représentation du type entier coté ASD (Attention: ne pas confondre avec les types LLVM)

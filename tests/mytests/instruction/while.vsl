@@ -1,0 +1,7 @@
+INT test, test1
+test1 := 10
+WHILE test1
+DO
+    test1 := test1 - 1
+    test := test1 + 1
+DONE

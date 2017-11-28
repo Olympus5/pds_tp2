@@ -32,7 +32,7 @@ public class Main {
       ASD.Program ast = parser.program().out;
 
       // Pretty-print the program (to debug parsing, if you implemented it!)
-      // System.err.println(ast.pp());
+      System.err.println(ast.pp());
 
       // Compute LLVM IR from the ast
       try {
