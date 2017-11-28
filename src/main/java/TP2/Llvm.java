@@ -107,9 +107,21 @@ public class Llvm {
         public abstract String toString();
     }
 
+    /**
+     * Représentation sous forme de class interne du type INT Llvm
+     */
     static public class IntType extends Type {
         public String toString() {
             return "i32";
+        }
+    }
+
+    /**
+     * Représentation sous forme de class interne du type Void Llvm
+     */
+    static public class VoidType extends Type {
+        public String toString() {
+            return "void";
         }
     }
 

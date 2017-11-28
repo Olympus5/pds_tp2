@@ -14,12 +14,14 @@ public class ASD {
      * Représentation sous forme de classe interne du Variant/Constructeur Program
      */
     static public class Program {
+        List<Prototype> p;
         Bloc b;// What a program contains. TODO : change when you extend the language
 
         /**
          * Constructor
          */
-        public Program(Bloc b) {
+        public Program(List<Prototype> p, Bloc b) {
+            this.p = p;
             this.b = b;
         }
 
@@ -28,7 +30,13 @@ public class ASD {
          * @return Représentation sous forme de chaine de caractère d'un programme VSL+
          */
         public String pp() {
-            return this.b.pp();
+            String ret = "";
+
+            for(Prototype prototype : this.p) {
+                ret += prototype.pp();
+            }
+
+            return ret + "\n" + this.b.pp();
         }
 
         /**
@@ -39,12 +47,202 @@ public class ASD {
             SymbolTable st = new SymbolTable();
             // TODO : change when you extend the language
 
+            for(Prototype prototype : this.p) {
+                prototype.toIR(st);
+            }
+
             return b.toIR(st);
         }
     }
 
     // TODO: All toIR methods returns the IR, plus extra information (synthesized attributes)
     // TODO: They can take extra arguments (inherited attributes)
+
+    /**
+     * Représentation sous forme de classe interne du Variant Prototype
+     */
+    static public abstract class Prototype {
+        /**
+         * Nom de la fonction
+         */
+        String ident;
+
+        /**
+         * Liste des attributs
+         */
+        List<String> attributs;
+
+        /**
+         * Constructeur
+         * @param ident Nom de la fonction
+         * @param attrs Liste des attributs
+         */
+        public Prototype(String ident, List<String> attributs) {
+            this.ident = ident;
+            this.attributs = attributs;
+        }
+
+        /**
+         * Pretty-Printer
+         * @return the VSL+ prototype code on string representation
+         */
+        public abstract String pp();
+
+        /**
+         * Générateur d'un ensemble d'instructions LLVM
+         * @return Ensemble d'instructions LLVM
+         */
+        public abstract RetPrototype toIR(SymbolTable st) throws TypeException;
+
+        /**
+         * Représentation de l'état d'une instruction sous forme de classe interne
+         */
+        static public class RetPrototype {
+            /**
+             * Instruction LLVM
+             */
+            public Llvm.IR ir;
+
+            /**
+             * Type de la fonction (synthesized)
+             */
+            public Type type;
+
+            /**
+             * Identifiant de la fonction (synthesized)
+             */
+            public String result;
+
+            /**
+             * table des symboles contenant les attributs de la fonction (synthetized)
+             */
+            public SymbolTable attributsST;
+
+            /**
+             * Constructeur
+             * @param ir Instruction LLVM
+             * @param type Type de la fonction
+             * @param result identifiant de la fonction
+             * @param attributsST table des symboles contenant les attributs
+             */
+            public RetPrototype(Llvm.IR ir, Type type, String result, SymbolTable attributsST) {
+                this.ir = ir;
+                this.type = type;
+                this.result = result;
+                this.attributsST = attributsST;
+            }
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur IntPrototype
+     */
+    static public class IntPrototype extends Prototype {
+        /**
+         * Constructeur
+         * @param ident Nom de la fonction
+         * @param attrs Liste des attributs
+         */
+        public IntPrototype(String ident, List<String> attributs) {
+            super(ident, attributs);
+        }
+
+        @Override
+        public String pp() {
+            String ret = "PROTO INT " + this.ident + "(";
+
+            for(String attribut : this.attributs) {
+                ret += attribut + ", ";
+            }
+
+            return ret + ")\n";
+        }
+
+        @Override
+        public RetPrototype toIR(SymbolTable st) {
+            //Ajout des attributs dans une table des symboles
+            SymbolTable attributsST = new SymbolTable();
+
+            SymbolTable.VariableSymbol symbolAttr = null;
+
+            for(String attribut : super.attributs) {
+                symbolAttr = new SymbolTable.VariableSymbol(new IntType(), attribut);
+
+                if(!attributsST.add(symbolAttr)) {
+                    System.err.println("Warning: the symbol '" + attribut + "' has already exist in SymbolTable in this scope.");
+                }
+            }
+
+            SymbolTable.FunctionSymbol symbol = new SymbolTable.FunctionSymbol(new IntType(), super.ident, attributsST, true);
+            String result = "%" + super.ident;//TODO: à enlever si cela ne sert à rien
+
+            RetPrototype ret = new RetPrototype(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result, attributsST);//TODO: à enlever si cela ne sert à rien
+
+            if(!st.add(symbol)) {
+                System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
+            }
+
+            //TODO: supprimer lors de la mise en production (rendu final)
+            if(!symbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+
+            return ret;
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur VoidPrototype
+     */
+    static public class VoidPrototype extends Prototype {
+        /**
+         * Constructeur
+         * @param ident Nom de la fonction
+         * @param attrs Liste des attributs
+         */
+        public VoidPrototype(String ident, List<String> attributs) {
+            super(ident, attributs);
+        }
+
+        @Override
+        public String pp() {
+            String ret = "PROTO VOID " + this.ident + "(";
+
+            for(String attribut : this.attributs) {
+                ret += attribut + ", ";
+            }
+
+            return ret + ")\n";
+        }
+
+        @Override
+        public RetPrototype toIR(SymbolTable st) {
+            //Ajout des attributs dans une table des symboles
+            SymbolTable attributsST = new SymbolTable();
+
+            SymbolTable.VariableSymbol symbolAttr = null;
+
+            for(String attribut : super.attributs) {
+                symbolAttr = new SymbolTable.VariableSymbol(new IntType(), attribut);
+
+                if(!attributsST.add(symbolAttr)) {
+                    System.err.println("Warning: the symbol '" + attribut + "' has already exist in SymbolTable in this scope.");
+                }
+            }
+
+            SymbolTable.FunctionSymbol symbol = new SymbolTable.FunctionSymbol(new VoidType(), super.ident, attributsST, true);
+            String result = "%" + super.ident;//TODO: à enlever si cela ne sert à rien
+
+            RetPrototype ret = new RetPrototype(new Llvm.IR(Llvm.empty(), Llvm.empty()), new VoidType(), result, attributsST);//TODO: à enlever si cela ne sert à rien
+
+            if(!st.add(symbol)) {
+                System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
+            }
+
+            //TODO: supprimer lors de la mise en production (rendu final)
+            if(!symbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+
+            return ret;
+        }
+    }
 
     /**
      * Représentation sous forme de classe interne du Variant/Constructeur Program
@@ -70,7 +268,7 @@ public class ASD {
 
             level++;
 
-            ret += Utils.indent(level) + "INT ";
+            if(!this.variables.isEmpty()) ret += Utils.indent(level) + "INT ";
 
             for(Variable variable : this.variables) {
                 ret += variable.pp() + ", ";
@@ -824,6 +1022,26 @@ public class ASD {
         @Override
         public Llvm.Type toLlvmType() {
             return new Llvm.IntType();
+        }
+    }
+
+    /**
+     * Représentation du type entier coté ASD (Attention: ne pas confondre avec les types LLVM)
+     */
+    static class VoidType extends Type {
+        @Override
+        public String pp() {
+            return "VOID";
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof VoidType;
+        }
+
+        @Override
+        public Llvm.Type toLlvmType() {
+            return new Llvm.VoidType();
         }
     }
 

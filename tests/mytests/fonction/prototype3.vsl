@@ -1,0 +1,6 @@
+PROTO VOID test1(n)
+PROTO INT test2(n, n2)
+PROTO INT test3(n2)
+
+INT n, n2
+n := n2 * (3 + 4)

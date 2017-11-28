@@ -1,0 +1,4 @@
+PROTO INT fact(n)
+
+INT test
+test := 5 * (2 - 3) + 17

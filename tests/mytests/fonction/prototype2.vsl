@@ -1,0 +1,4 @@
+PROTO VOID fact(n)
+
+INT n
+n := 10

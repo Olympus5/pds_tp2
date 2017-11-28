@@ -16,7 +16,12 @@ options {
 // TODO : other rules
 
 program returns [ASD.Program out]
-    : b=bloc EOF { $out = new ASD.Program($b.out); } // TODO : change when you extend the language
+    : p=prototype b=bloc EOF { $out = new ASD.Program($p.out, $b.out); } // TODO : change when you extend the language
+    ;
+
+prototype returns [List<ASD.Prototype> out] locals [List<String> attr, String nom]
+    : { $out = new ArrayList(); } ({ $attr = new ArrayList<String>(); } (PROTO INT IDENT { $nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP { $out.add(new ASD.IntPrototype($nom, $attr)); }//TODO: Ajouter variable
+                                                | PROTO VOID IDENT { $nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP { $out.add(new ASD.VoidPrototype($nom, $attr)); }))*
     ;
 
 bloc returns [ASD.Bloc out]
