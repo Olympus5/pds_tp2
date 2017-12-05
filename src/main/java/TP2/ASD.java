@@ -15,14 +15,14 @@ public class ASD {
      */
     static public class Program {
         List<Prototype> p;
-        Bloc b;// What a program contains. TODO : change when you extend the language
+        List<Function> f;// What a program contains. TODO : change when you extend the language
 
         /**
          * Constructor
          */
-        public Program(List<Prototype> p, Bloc b) {
+        public Program(List<Prototype> p, List<Function> f) {
             this.p = p;
-            this.b = b;
+            this.f = f;
         }
 
         /**
@@ -36,7 +36,11 @@ public class ASD {
                 ret += prototype.pp();
             }
 
-            return ret + "\n" + this.b.pp();
+            for(Function func : this.f) {
+                ret += func.pp();
+            }
+
+            return ret + "\n";
         }
 
         /**
@@ -51,7 +55,14 @@ public class ASD {
                 prototype.toIR(st);
             }
 
-            return b.toIR(st);
+            Function.RetFunction ret = null;
+
+            for(Function func : this.f) {
+                if(ret == null) ret = func.toIR(st);
+                else ret.ir.append(func.toIR(st).ir);
+            }
+
+            return ret.ir;
         }
     }
 
@@ -84,7 +95,7 @@ public class ASD {
 
         /**
          * Pretty-Printer
-         * @return the VSL+ prototype code on string representation
+         * @return Représentation sous forme de chaine de caractère d'un programme VSL+
          */
         public abstract String pp();
 
@@ -245,6 +256,261 @@ public class ASD {
     }
 
     /**
+     * Représentation sous forme de classe interne du Variant Function
+     */
+    static public abstract class Function {
+        /**
+         * Nom de la fonction
+         */
+        String ident;
+
+        /**
+         * Liste des attributs
+         */
+        List<String> attributs;
+
+        /**
+         * Corps de la fonction
+         */
+        Bloc bloc;
+
+        /**
+         * Constructeurr
+         * @param ident Nom de la fonction
+         * @param attributs Liste des attributs
+         * @param bloc Corps de la fonction
+         */
+        public Function(String ident, List<String> attributs, Bloc bloc) {
+            this.ident = ident;
+            this.attributs = attributs;
+            this.bloc = bloc;
+        }
+
+        /**
+         * Pretty-Printer
+         * @return Représentation sous forme de chaine de caractère d'un programme VSL+
+         */
+        public abstract String pp();
+
+        /**
+         * Générateur d'un ensemble d'instructions LLVM
+         * @param st Table des symboles principale
+         * @return Ensemble d'instructions LLVM
+         */
+        public abstract RetFunction toIR(SymbolTable st) throws TypeException;
+
+        /**
+         * Représentation de l'état d'une instruction sous forme de classe interne
+         */
+        static public class RetFunction {
+            /**
+             * Instruction LLVM
+             */
+            public Llvm.IR ir;
+
+            /**
+             * Type de la fonction (synthesized)
+             */
+            public Type type;
+
+            /**
+             * Identifiant de la fonction (synthesized)
+             */
+            public String name;
+
+            /**
+             * Constructeur
+             * @param ir Instruction LLVM
+             * @param type Type de la fonction
+             * @param name Nom de la fonction
+             */
+            public RetFunction(Llvm.IR ir, Type type, String name) {
+                this.ir = ir;
+                this.type = type;
+                this.name = name;
+            }
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne d'un Constructeur IntFunction
+     */
+    static public class IntFunction extends Function {
+
+        /**
+         * Constructeur
+         * @param ident Nom de la fonction
+         * @param attributs Liste des attributs de la fonction
+         * @param bloc Bloc principal de la fonction
+         */
+        public IntFunction(String ident, List<String> attributs, Bloc bloc) {
+            super(ident, attributs, bloc);
+        }
+
+        @Override
+        public String pp() {
+            String ret = "FUNC INT " + super.ident + "(";
+
+            for(String attribut : this.attributs) {
+                ret += attribut + ", ";
+            }
+
+            return ret + ")\n" + super.bloc.pp();
+        }
+
+        @Override
+        public RetFunction toIR(SymbolTable st) throws TypeException {
+            SymbolTable.FunctionSymbol symbol = (SymbolTable.FunctionSymbol) st.lookup(super.ident);
+
+            if(!super.ident.equals("main")) {//On verifie bien que la fonction est dans la table des symboles sauf pour le main
+                if(symbol == null) {
+                    System.err.println("Error: the symbol '" + super.ident + "' doesn't exist in the symbol table.");
+                    System.exit(0);
+                } else {
+                    if (!new IntType().equals(symbol.returnType)) {//On verifie que le type est toujours le même
+                        throw new TypeException("type mismatch: have " + symbol.returnType + " and " + new IntType());
+                    }
+
+                    for(String attribut : this.attributs) {//Maintenant on verifie que les attributs
+                        if(symbol.arguments.lookup(attribut) == null) {
+                            System.err.println("Error: the symbol '" + attribut + "' doesn't exist in the attribut symbol table.");
+                            System.exit(0);
+                        }
+                    }
+                }
+            } else {
+                SymbolTable.FunctionSymbol mainSymbol = new SymbolTable.FunctionSymbol(new IntType(), super.ident, new SymbolTable(), true);
+                if(!st.add(mainSymbol)) {
+                    System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
+                }
+
+                //TODO: supprimer lors de la mise en production (rendu final)
+                if(!mainSymbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+            }
+
+            String name = "@" + super.ident;
+            String result = "%return";
+            String entryLabel = Utils.newlab("entry");
+            String tmpRetour = Utils.newtmp();
+
+            RetFunction ret = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new IntType(), name);
+
+            Llvm.Instruction decl = new Llvm.Define(ret.type.toLlvmType(), ret.name, this.attributs);
+            Llvm.Instruction entry = new Llvm.Label(entryLabel);
+            Llvm.Instruction allocaRetour = new Llvm.Alloca(ret.type.toLlvmType(), result);
+            Llvm.Instruction  loadRetour = new Llvm.Load(tmpRetour, ret.type.toLlvmType(), ret.type.toLlvmType(), result);
+
+            List<Llvm.Instruction> allocaAttributs = new ArrayList<Llvm.Instruction>();
+
+            for(String attribut : super.attributs) {
+                allocaAttributs.add(new Llvm.Alloca(new IntType().toLlvmType(), "%" + attribut + "1"));
+            }
+
+            Llvm.Instruction retour = new Llvm.Return(ret.type.toLlvmType(), tmpRetour);
+
+            ret.ir.appendCode(decl);
+            ret.ir.appendCode(entry);
+            ret.ir.appendCode(allocaRetour);//TODO la gestion de l'instruction retour (Quand on rencontre une ligne du type "RETURN n")
+
+            for(Llvm.Instruction attribut : allocaAttributs) {
+                ret.ir.appendCode(attribut);
+            }
+
+            ret.ir.append(super.bloc.toIR(st, super.ident));
+            ret.ir.appendCode(loadRetour);
+            ret.ir.appendCode(retour);
+
+            return ret;
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne d'un Constructeur VoidFunction
+     */
+    static public class VoidFunction extends Function {
+
+        /**
+         * Constructeur
+         * @param ident Nom de la fonction
+         * @param attributs Liste des attributs de la fonction
+         * @param bloc Bloc principal de la fonction
+         */
+        public VoidFunction(String ident, List<String> attributs, Bloc bloc) {
+            super(ident, attributs, bloc);
+        }
+
+        @Override
+        public String pp() {
+            String ret = "FUNC VOID " + super.ident + "(";
+
+            for(String attribut : this.attributs) {
+                ret += attribut + ", ";
+            }
+
+            return ret + ")\n" + super.bloc.pp();
+        }
+
+        @Override
+        public RetFunction toIR(SymbolTable st) throws TypeException {
+            SymbolTable.FunctionSymbol symbol = (SymbolTable.FunctionSymbol) st.lookup(super.ident);
+
+            if(!super.ident.equals("main")) {//On verifie bien que la fonction est dans la table des symboles sauf pour le main
+                if(symbol == null) {
+                    System.err.println("Error: the symbol '" + super.ident + "' doesn't exist in the symbol table.");
+                    System.exit(0);
+                } else {
+                    if (!new VoidType().equals(symbol.returnType)) {//On verifie que le type est toujours le même
+                        throw new TypeException("type mismatch: have " + symbol.returnType + " and " + new VoidType());
+                    }
+
+                    for(String attribut : this.attributs) {//Maintenant on verifie que les attributs
+                        if(symbol.arguments.lookup(attribut) == null) {
+                            System.err.println("Error: the symbol '" + super.ident + "' doesn't exist in the attribut symbol table.");
+                            System.exit(0);
+                        }
+                    }
+                }
+            } else {
+                SymbolTable.FunctionSymbol mainSymbol = new SymbolTable.FunctionSymbol(new VoidType(), super.ident, new SymbolTable(), true);
+                if(!st.add(mainSymbol)) {
+                    System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
+                }
+
+                //TODO: supprimer lors de la mise en production (rendu final)
+                if(!mainSymbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+            }
+
+            String name = "@" + super.ident;
+            String entryLabel = Utils.newlab("entry");
+
+            RetFunction ret = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new VoidType(), name);
+
+            Llvm.Instruction decl = new Llvm.Define(ret.type.toLlvmType(), ret.name, this.attributs);
+            Llvm.Instruction entry = new Llvm.Label(entryLabel);
+
+            List<Llvm.Instruction> varAttributs = new ArrayList<Llvm.Instruction>();
+
+            for(String attribut : super.attributs) {
+                varAttributs.add(new Llvm.Alloca(new IntType().toLlvmType(), "%" + attribut + "1"));
+            }
+
+            Llvm.Instruction retour = new Llvm.Return(ret.type.toLlvmType(), "");
+
+            ret.ir.appendCode(decl);
+            ret.ir.appendCode(entry);
+
+            for(Llvm.Instruction attribut : varAttributs) {
+                ret.ir.appendCode(attribut);
+            }
+
+            ret.ir.append(super.bloc.toIR(st, super.ident));
+            ret.ir.appendCode(retour);
+
+            return ret;
+        }
+    }
+
+    /**
      * Représentation sous forme de classe interne du Variant/Constructeur Program
      */
     static public class Bloc {
@@ -253,6 +519,8 @@ public class ASD {
 
         /**
          * Constructor
+         * @param variables Liste des variables déclaré dans le bloc
+         * @param instructions Liste des instructions du bloc
          */
         public Bloc(List<Variable> variables, List<Instruction> instructions) {
             this.variables = variables;
@@ -286,18 +554,20 @@ public class ASD {
         }
 
         /**
-         * Générateur d'un ensemble d'instructions LLVM
+         * Générateur d'un ensemble d'instructions LLVM (autre bloc)
+         * @param st Table des symboles du scope précédent
+         * @param func Nom de la fonction où on se situe
          * @return Ensemble d'instructions LLVM
          */
-        public Llvm.IR toIR(SymbolTable st) throws TypeException {
+        public Llvm.IR toIR(SymbolTable st, String func) throws TypeException {
             SymbolTable scope = new SymbolTable(st);
             Llvm.IR retIr = new Llvm.IR(Llvm.empty() , Llvm.empty());
 
             Variable.RetVariable retVar = null;
 
             for(Variable variable : this.variables) {
-                if(retVar == null) retVar = variable.toIR(scope);
-                else retVar.ir.append(variable.toIR(scope).ir);
+                if(retVar == null) retVar = variable.toIR(scope, func);
+                else retVar.ir.append(variable.toIR(scope, func).ir);
             }
 
             if(retVar != null) retIr.append(retVar.ir);
@@ -306,17 +576,11 @@ public class ASD {
             Instruction.RetInstruction retInst = null;
 
             for(Instruction instruction : this.instructions) {
-                if(retInst == null) retInst = instruction.toIR(scope);
-                else retInst.ir.append(instruction.toIR(scope).ir);
+                if(retInst == null) retInst = instruction.toIR(scope, func);
+                else retInst.ir.append(instruction.toIR(scope, func).ir);
             }
 
             if(retInst != null) retIr.append(retInst.ir);
-
-            // add a return instruction
-            if(level == 0) {
-                Llvm.Instruction ret = new Llvm.Return(new IntType().toLlvmType(), "0");//TODO: Modifier "0" quand les retours seront pris en compte
-                retIr.appendCode(ret);
-            }
 
             return retIr;
         }
@@ -334,9 +598,11 @@ public class ASD {
 
         /**
          * Générateur d'un ensemble d'instructions LLVM
-         * * @return Ensemble d'instructions LLVM
+         * @param st Table des symboles du scope
+         * @param func Nom de la fonction où on se situe
+         * @return Ensemble d'instructions LLVM
          */
-        public abstract RetExpression toIR(SymbolTable st) throws TypeException;
+        public abstract RetExpression toIR(SymbolTable st, String func) throws TypeException;
 
         // TODO: Object returned by toIR on expressions, with IR + synthesized attributes
         /**
@@ -361,6 +627,9 @@ public class ASD {
 
             /**
              * Constructeur
+             * @param ir Instruction LLVM
+             * @param type Type de l'expression
+             * @param result Resultat de l'expression
              */
             public RetExpression(Llvm.IR ir, Type type, String result) {
                 this.ir = ir;
@@ -386,6 +655,8 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param left Partie gauche de l'addition
+         * @param right Partie droite de l'addition
          */
         public AddExpression(Expression left, Expression right) {
             this.left = left;
@@ -398,9 +669,9 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st) throws TypeException {
-            RetExpression leftRet = left.toIR(st);
-            RetExpression rightRet = right.toIR(st);
+        public RetExpression toIR(SymbolTable st, String func) throws TypeException {
+            RetExpression leftRet = left.toIR(st, func);
+            RetExpression rightRet = right.toIR(st, func);
 
             // We check if the types mismatches
             if (!leftRet.type.equals(rightRet.type)) {
@@ -442,6 +713,8 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param left Partie gauche de la soustraction
+         * @param right Partie droite de la soustraction
          */
         public SubExpression(Expression left, Expression right) {
             this.left = left;
@@ -454,9 +727,9 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st) throws TypeException {
-            RetExpression leftRet = left.toIR(st);
-            RetExpression rightRet = right.toIR(st);
+        public RetExpression toIR(SymbolTable st, String func) throws TypeException {
+            RetExpression leftRet = left.toIR(st, func);
+            RetExpression rightRet = right.toIR(st, func);
 
             if (!leftRet.type.equals(rightRet.type)) {
                 throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
@@ -490,6 +763,8 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param left Partie gauche de la multiplication
+         * @param right Partie droite de la multiplication
          */
         public MulExpression(Expression left, Expression right) {
             this.left = left;
@@ -502,9 +777,9 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st) throws TypeException {
-            RetExpression leftRet = left.toIR(st);
-            RetExpression rightRet = right.toIR(st);
+        public RetExpression toIR(SymbolTable st, String func) throws TypeException {
+            RetExpression leftRet = left.toIR(st, func);
+            RetExpression rightRet = right.toIR(st, func);
 
             if (!leftRet.type.equals(rightRet.type)) {
                 throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
@@ -538,6 +813,8 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param left Partie gauche de la division
+         * @param right Partie droite de la division
          */
         public DivExpression(Expression left, Expression right) {
             this.left = left;
@@ -550,9 +827,9 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st) throws TypeException {
-            RetExpression leftRet = left.toIR(st);
-            RetExpression rightRet = right.toIR(st);
+        public RetExpression toIR(SymbolTable st, String func) throws TypeException {
+            RetExpression leftRet = left.toIR(st, func);
+            RetExpression rightRet = right.toIR(st, func);
 
             if (!leftRet.type.equals(rightRet.type)) {
                 throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
@@ -582,6 +859,7 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param value Valeur de la constante
          */
         public IntegerExpression(int value) {
             this.value = value;
@@ -593,7 +871,7 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st) {
+        public RetExpression toIR(SymbolTable st, String func) {
             // Here we simply return an empty IR
             // the `result' of this expression is the integer itself (as string)
             return new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "" + this.value);
@@ -611,6 +889,7 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param ident Nom de la variable dans l'expression
          */
         public VariableExpression(String ident) {
             this.ident = ident;
@@ -622,21 +901,35 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st) {
+        public RetExpression toIR(SymbolTable st, String func) {//TODO: prendre compte les paramètres
             SymbolTable.VariableSymbol identSymbol = (SymbolTable.VariableSymbol) st.lookup(this.ident);
+            String ident = "";
 
-            if(identSymbol == null) {
-                System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");
-                System.exit(0);
+            if(identSymbol == null) {// On check si on trouve la variable dans la table des symboles
+                SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);//Si pas trouvé, on récupère la fonction dans la table des symboles
+
+                if(funcSymbol != null) {//Je dois renvoyer une erreur ???
+                    identSymbol = (SymbolTable.VariableSymbol) funcSymbol.arguments.lookup(this.ident);//On check dans sa table des attributs
+
+                    if(identSymbol == null) {//Message d'erreur si vrai
+                        System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");//TODO: si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                        System.exit(0);
+                    } else {
+                        ident = "%" + identSymbol.ident;
+                        ident += "1";//On récupère un argument (cf. poly TP2: code LLVM) !!!!
+                    }
+                }
+            } else {
+                ident = "%" + identSymbol.ident;
             }
 
             String result = Utils.newtmp();
 
             RetExpression ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), identSymbol.type, result);
 
-            Llvm.Instruction store = new Llvm.Load(result, identSymbol.type.toLlvmType(), identSymbol.type.toLlvmType(), "%" + identSymbol.ident);
+            Llvm.Instruction load = new Llvm.Load(result, identSymbol.type.toLlvmType(), identSymbol.type.toLlvmType(), ident);
 
-            ret.ir.appendCode(store);
+            ret.ir.appendCode(load);
 
             return ret;
         }
@@ -667,9 +960,11 @@ public class ASD {
 
         /**
          * Générateur d'un ensemble d'instructions LLVM
+         * @param st Table des symboles du scope
+         * @param func Nom de la fonction où on se situe
          * @return Ensemble d'instructions LLVM
          */
-        public abstract RetVariable toIR(SymbolTable st) throws TypeException;
+        public abstract RetVariable toIR(SymbolTable st, String func) throws TypeException;
 
         /**
          * Représentation de l'état d'une instruction sous forme de classe interne
@@ -692,6 +987,9 @@ public class ASD {
 
             /**
              * Constructeur
+             * @param ir L'instruction LLVM
+             * @param type Le type de la variable
+             * @param result Le nom de la variable
              */
             public RetVariable(Llvm.IR ir, Type type, String result) {
                 this.ir = ir;
@@ -707,6 +1005,7 @@ public class ASD {
     static public class IntegerVariable extends Variable {
         /**
          * Constructeur
+         * @param ident Le nom de la variable
          */
         public IntegerVariable(String ident) {
             super(ident);
@@ -718,7 +1017,15 @@ public class ASD {
         }
 
         @Override
-        public RetVariable toIR(SymbolTable st) {
+        public RetVariable toIR(SymbolTable st, String func) {
+            SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);
+
+            if(funcSymbol != null) {
+                if(funcSymbol.arguments.lookup(super.ident) != null) {
+                    System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable of attributs.");
+                }
+            }
+
             SymbolTable.VariableSymbol symbol = new SymbolTable.VariableSymbol(new IntType(), super.ident);
             String result = "%" + super.ident;
 
@@ -751,9 +1058,11 @@ public class ASD {
 
         /**
          * Générateur d'un ensemble d'instructions LLVM
+         * @param st Table des symboles du scope
+         * @param func Nom de la fonction où on se situe
          * @return Ensemble d'instructions LLVM
          */
-        public abstract RetInstruction toIR(SymbolTable st) throws TypeException;
+        public abstract RetInstruction toIR(SymbolTable st, String func) throws TypeException;
 
         /**
          * Représentation de l'état d'une instruction sous forme de classe interne
@@ -771,6 +1080,8 @@ public class ASD {
 
             /**
              * Constructeur
+             * @param ir L'instruction LLVM
+             * @param result Le resultat de l'instruction
              */
             public RetInstruction(Llvm.IR ir, String result) {
                 this.ir = ir;
@@ -795,6 +1106,8 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param ident Le nom de la variable à qui on affection expression
+         * @param expression L'expression à affecter
          */
         public AffInstruction(String ident, Expression expression) {
             this.ident = ident;
@@ -807,27 +1120,41 @@ public class ASD {
         }
 
         @Override
-        public RetInstruction toIR(SymbolTable st) throws TypeException {
+        public RetInstruction toIR(SymbolTable st, String func) throws TypeException {
+            //TODO: gérer le principe qu'une variable peut avoir le même nom qu'une fonction
+            //TODO: gérer un bloc imbriqué dans un bloc
             SymbolTable.VariableSymbol identSymbol = (SymbolTable.VariableSymbol) st.lookup(this.ident);
+            String ident = "";
 
-            if(identSymbol == null) {
-                System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");
-                System.exit(0);
+            if(identSymbol == null) {// On check si on trouve la variable dans la table des symboles
+                SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);//Si pas trouvé, on récupère la fonction dans la table des symboles
+
+                if(funcSymbol != null) {//Je dois renvoyer une erreur ???
+                    identSymbol = (SymbolTable.VariableSymbol) funcSymbol.arguments.lookup(this.ident);//On check dans sa table des attributs
+
+                    if(identSymbol == null) {//Message d'erreur si vrai
+                        System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");//si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                        System.exit(0);
+                    } else {
+                        ident = "%" + identSymbol.ident;
+                        ident += "1"; // On récupère un argument (cf. poly TP2: code LLVM) !!!!
+                    }
+                }
+            } else {
+                ident = "%" + identSymbol.ident;
             }
 
-            Expression.RetExpression retExpr = expression.toIR(st);
+            Expression.RetExpression retExpr = expression.toIR(st, func);
 
             if (!identSymbol.type.equals(retExpr.type)) {
                 throw new TypeException("type mismatch: have " + identSymbol.type + " and " + retExpr.type);
             }
 
-            String result = "%" + identSymbol.ident;
-
-            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), result);
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), ident);
 
             ret.ir.append(retExpr.ir);
 
-            Llvm.Instruction store = new Llvm.Store(retExpr.type.toLlvmType(), retExpr.result, identSymbol.type.toLlvmType(), result);
+            Llvm.Instruction store = new Llvm.Store(retExpr.type.toLlvmType(), retExpr.result, identSymbol.type.toLlvmType(), ident);
 
             ret.ir.appendCode(store);
 
@@ -856,6 +1183,9 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param expression La condition
+         * @param bloc1 Le bloc du if
+         * @param bloc2 Si différents de null bloc du else, sinon rien
          */
         public IfElseInstruction(Expression expression, Bloc bloc1, Bloc bloc2) {
             this.expression = expression;
@@ -878,8 +1208,8 @@ public class ASD {
         }
 
         @Override
-        public RetInstruction toIR(SymbolTable st) throws TypeException {
-            Expression.RetExpression cond = this.expression.toIR(st);
+        public RetInstruction toIR(SymbolTable st, String func) throws TypeException {
+            Expression.RetExpression cond = this.expression.toIR(st, func);
 
             if (!cond.type.equals(new IntType())) {
                 throw new TypeException("type mismatch: have " + cond.type + " and " + new IntType());
@@ -907,12 +1237,12 @@ public class ASD {
             ret.ir.appendCode(icmp);
             ret.ir.appendCode(brCond);
             ret.ir.appendCode(new Llvm.Label(si));
-            ret.ir.append(this.bloc1.toIR(st));
+            ret.ir.append(this.bloc1.toIR(st, func));
             ret.ir.appendCode(brUncond);
 
             if(this.bloc2 != null) {//Si il y a un else
                 ret.ir.appendCode(new Llvm.Label(sinon));
-                ret.ir.append(this.bloc2.toIR(st));
+                ret.ir.append(this.bloc2.toIR(st, func));
                 ret.ir.appendCode(brUncond);
             }
 
@@ -938,6 +1268,8 @@ public class ASD {
 
         /**
          * Constructeur
+         * @param expression La condition
+         * @param bloc Le corps de la boucle
          */
         public WhileInstruction(Expression expression, Bloc bloc) {
             this.expression = expression;
@@ -955,8 +1287,8 @@ public class ASD {
         }
 
         @Override
-        public RetInstruction toIR(SymbolTable st) throws TypeException {
-            Expression.RetExpression cond = this.expression.toIR(st);
+        public RetInstruction toIR(SymbolTable st, String func) throws TypeException {
+            Expression.RetExpression cond = this.expression.toIR(st, func);
 
             if (!cond.type.equals(new IntType())) {
                 throw new TypeException("type mismatch: have " + cond.type + " and " + new IntType());
@@ -979,9 +1311,61 @@ public class ASD {
             ret.ir.appendCode(icmp);
             ret.ir.appendCode(brCond);
             ret.ir.appendCode(new Llvm.Label(faire));
-            ret.ir.append(this.bloc.toIR(st));
+            ret.ir.append(this.bloc.toIR(st, func));
             ret.ir.appendCode(brUncond);
             ret.ir.appendCode(new Llvm.Label(fait));
+
+            return ret;
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur WhileInstruction
+     */
+    static public class ReturnInstruction extends Instruction {
+
+        /**
+         * Expression à retourner
+         */
+        Expression expression;
+
+        /**
+         * Constructeur
+         * @param expression Expression à retourner
+         */
+        public ReturnInstruction(Expression expression) {
+            this.expression = expression;
+        }
+
+        @Override
+        public String pp() {
+            return Utils.indent(level) + "RETURN " + this.expression.pp();
+        }
+
+        @Override
+        public RetInstruction toIR(SymbolTable st, String func) throws TypeException {
+            Expression.RetExpression retExpr = this.expression.toIR(st, func);
+            SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);
+
+            if(funcSymbol == null) {//On regarde que la fonction est bien déclaré dans la table des symboles
+                System.err.println("Error: the symbol '" + func + "' doesn't exist in the symbol table.");//si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                System.exit(0);
+            }
+
+            System.err.println(func);
+
+            if(!retExpr.type.equals(funcSymbol.returnType)) {//Maintenant on check si le type de l'expression à retourner est égale au type de retour de la fonction
+                throw new TypeException("type mismatch: have " + retExpr.type + " and " + funcSymbol.returnType);
+            }
+
+            String result = "%return";
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), result);
+
+            //TODO: Affecter le résultat de l'expression à %return
+            Llvm.Instruction store = new Llvm.Store(retExpr.type.toLlvmType(), retExpr.result, funcSymbol.returnType.toLlvmType(), result);
+
+            ret.ir.append(retExpr.ir);
+            ret.ir.appendCode(store);
 
             return ret;
         }

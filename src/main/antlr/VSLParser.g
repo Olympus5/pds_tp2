@@ -16,12 +16,19 @@ options {
 // TODO : other rules
 
 program returns [ASD.Program out]
-    : p=prototype b=bloc EOF { $out = new ASD.Program($p.out, $b.out); } // TODO : change when you extend the language
+    : p=prototype f=function EOF { $out = new ASD.Program($p.out, $f.out); } // TODO : change when you extend the language
     ;
 
 prototype returns [List<ASD.Prototype> out] locals [List<String> attr, String nom]
     : { $out = new ArrayList(); } ({ $attr = new ArrayList<String>(); } (PROTO INT IDENT { $nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP { $out.add(new ASD.IntPrototype($nom, $attr)); }//TODO: Ajouter variable
                                                 | PROTO VOID IDENT { $nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP { $out.add(new ASD.VoidPrototype($nom, $attr)); }))*
+    ;
+
+function returns [List<ASD.Function> out] locals [List<String> attr, String nom, String type]
+    : {$out = new ArrayList<ASD.Function>(); }
+    ( { $attr = new ArrayList<String>(); }
+    ( FUNC INT IDENT {$nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP b=bloc { $out.add(new ASD.IntFunction($nom, $attr, $b.out)); }
+    | FUNC VOID IDENT {$nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP b=bloc { $out.add(new ASD.VoidFunction($nom, $attr, $b.out)); }))+
     ;
 
 bloc returns [ASD.Bloc out]
@@ -38,7 +45,8 @@ instruction returns [List<ASD.Instruction> out]
     : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }
                                                     | IF e=expression THEN b=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b.out, null)); }
                                                     | IF e=expression THEN b1=bloc ELSE b2=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); }
-                                                    | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); })*
+                                                    | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); }
+                                                    | RETURN e=expression { $out.add(new ASD.ReturnInstruction($e.out)); })*
     ;
 
 expression returns [ASD.Expression out]

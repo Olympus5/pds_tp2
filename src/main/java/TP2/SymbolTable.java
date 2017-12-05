@@ -104,6 +104,10 @@ public class SymbolTable {
     return res; // Either the symbol or null
   }
 
+  public Map getTable() {
+      return this.table;
+  }
+
   @Override public boolean equals(Object obj) {
     if(obj == null) return false;
     if(obj == this) return true;

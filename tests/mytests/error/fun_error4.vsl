@@ -1,0 +1,12 @@
+PROTO VOID foo()
+
+FUNC INT main() {
+    test
+    test := 5
+    RETURN test
+}
+
+FUNC VOID foo(n, r) {
+    test
+    test := 5 + n - r
+}

@@ -1,0 +1,11 @@
+PROTO VOID fact(n)
+
+FUNC VOID main() {
+    INT test
+    test := 10 - 2
+}
+
+FUNC VOID fact(n) {
+    INT test
+    test := n
+}

@@ -2,6 +2,7 @@ package TP2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 
 // This file contains a simple LLVM IR representation
 // and methods to generate its string representation
@@ -76,18 +77,20 @@ public class Llvm {
             for (Instruction inst: header)
                 r.append(inst);
 
+            r.append("; ModuleID = ’main’");
+
             r.append("\n\n");
 
             // We create the function main
             // TODO : remove this when you extend the language
-            r.append("define i32 @main() {\n");
+            //r.append("define i32 @main() {\n");
 
 
             for (Instruction inst: code)
                 r.append(inst);
 
             // TODO : remove this when you extend the language
-            r.append("}\n");
+            //r.append("}\n");
 
             return r.toString();
         }
@@ -526,6 +529,56 @@ public class Llvm {
             return this.name + ": \n";
         }
     }
+
+    /**
+     * Représentation de l'instruction define sous forme de classe interne
+     */
+    static public class Define extends Instruction {
+        /**
+         * Type de retour de la fonction
+         */
+        Type type;
+
+        /**
+         * Nom de la fonction
+         */
+        String name;
+
+        /**
+         * Liste des attributs de la fonction
+         */
+        List<String> attributs;
+
+        /**
+         * Constructeur
+         * @param type Type de la fonction
+         * @param name nom de la fonction
+         * @param attributs Liste des attributs de la fonction
+         */
+        public Define(Type type, String name, List<String> attributs) {
+            this.type = type;
+            this.name = name;
+            this.attributs = attributs;
+        }
+
+        @Override
+        public String toString() {
+            String ret = "define " + this.type + " " + this.name + "(";
+
+            if(!attributs.isEmpty()) {
+                Iterator<String> it = attributs.iterator();
+
+                ret += "i32 %" + it.next();
+
+                while(it.hasNext()) {
+                    ret += ", i32 %" + it.next();
+                }
+            }
+
+            return ret + "){\n";
+        }
+    }
+
     /**
      * Représentation de l'instruction Return sous forme de la classe interne
      */
@@ -550,7 +603,7 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return "ret " + type + " " + value + "\n";
+            return "ret " + type + " " + value + "\n}\n\n";
         }
     }
 

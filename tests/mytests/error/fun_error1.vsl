@@ -1,0 +1,13 @@
+PROTO VOID foo()
+
+FUNC INT main() {
+    test
+    test := 5
+    RETURN test
+}
+
+FUNC INT foo() {
+    test
+    test := 5
+    RETURN test
+}

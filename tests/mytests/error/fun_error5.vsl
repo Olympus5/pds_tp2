@@ -1,0 +1,5 @@
+FUNC VOID main() {
+    test
+    test := 5
+    RETURN test
+}
