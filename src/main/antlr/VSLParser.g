@@ -41,12 +41,13 @@ variable returns [List<ASD.Variable> out]
                                                      (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)*
     ;
 
-instruction returns [List<ASD.Instruction> out]
+instruction returns [List<ASD.Instruction> out] locals [List<ASD.Expression> attr, String nom]
     : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }
                                                     | IF e=expression THEN b=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b.out, null)); }
                                                     | IF e=expression THEN b1=bloc ELSE b2=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); }
                                                     | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); }
-                                                    | RETURN e=expression { $out.add(new ASD.ReturnInstruction($e.out)); })*
+                                                    | RETURN e=expression { $out.add(new ASD.ReturnInstruction($e.out)); }
+                                                    | { $attr = new ArrayList<ASD.Expression>(); } IDENT { $nom = $IDENT.text; } LP (e1=expression { $attr.add($e1.out); } (COMMA e2=expression { $attr.add($e2.out); })*)? RP { $out.add(new ASD.FunctionInstruction($nom, $attr)); })*//Fonction dans une expression)*
     ;
 
 expression returns [ASD.Expression out]
@@ -61,8 +62,9 @@ factor returns [ASD.Expression out]
     | p=primary { $out = $p.out; }
     ;
 
-primary returns [ASD.Expression out]
+primary returns [ASD.Expression out] locals [List<ASD.Expression> attr, String nom]
     : INTEGER { $out = new ASD.IntegerExpression($INTEGER.int); }//Constante dans une expression
     | IDENT { $out = new ASD.VariableExpression($IDENT.text); }//Variable dans une expression
+    | { $attr = new ArrayList<ASD.Expression>(); } IDENT { $nom = $IDENT.text; } LP (e1=expression { $attr.add($e1.out); } (COMMA e2=expression { $attr.add($e2.out); })*)? RP { $out = new ASD.FunctionExpression($nom, $attr); }//Fonction dans une expression)*
     | LP e=expression RP { $out = $e.out; }//Expression entre parenthèses
     ;

@@ -1,6 +1,7 @@
 package TP2;
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -901,7 +902,7 @@ public class ASD {
         }
 
         @Override
-        public RetExpression toIR(SymbolTable st, String func) {//TODO: prendre compte les paramètres
+        public RetExpression toIR(SymbolTable st, String func) {
             SymbolTable.VariableSymbol identSymbol = (SymbolTable.VariableSymbol) st.lookup(this.ident);
             String ident = "";
 
@@ -912,7 +913,7 @@ public class ASD {
                     identSymbol = (SymbolTable.VariableSymbol) funcSymbol.arguments.lookup(this.ident);//On check dans sa table des attributs
 
                     if(identSymbol == null) {//Message d'erreur si vrai
-                        System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");//TODO: si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                        System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the arguments table.");//TODO: si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
                         System.exit(0);
                     } else {
                         ident = "%" + identSymbol.ident;
@@ -930,6 +931,74 @@ public class ASD {
             Llvm.Instruction load = new Llvm.Load(result, identSymbol.type.toLlvmType(), identSymbol.type.toLlvmType(), ident);
 
             ret.ir.appendCode(load);
+
+            return ret;
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur FonctionExpression
+     */
+    static public class FunctionExpression extends Expression {
+        /**
+         * Nom de la variable
+         */
+        String ident;
+        List<Expression> attributs;
+
+        /**
+         * Constructeur
+         * @param ident Nom de la variable dans l'expression
+         */
+        public FunctionExpression(String ident, List<Expression> attributs) {
+            this.ident = ident;
+            this.attributs = attributs;
+        }
+
+        @Override
+        public String pp() {
+            String ret = this.ident + "(";
+
+            for(Expression attribut : this.attributs) {
+                ret += attribut.pp() + ", ";
+            }
+
+            return ret + ")";
+        }
+
+        @Override
+        public RetExpression toIR(SymbolTable st, String func) throws TypeException {
+            SymbolTable.FunctionSymbol identSymbol = (SymbolTable.FunctionSymbol) st.lookup(this.ident);
+            String ident = "";
+
+            if(identSymbol == null) {// On check si on trouve la variable dans la table des symboles
+                System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");//TODO: si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                System.exit(0);
+            }
+
+            if(this.attributs.size() != identSymbol.arguments.size()) {
+                System.err.println("Error: ");
+                System.exit(0);
+            }//Gestion des arguments de la fonction
+
+            Hashtable<String, Llvm.Type> attrTypes = new Hashtable<String, Llvm.Type>();
+            List<String> attr = new ArrayList<String>();
+
+            String result = Utils.newtmp();
+
+            RetExpression ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), identSymbol.returnType, result);
+            RetExpression tmp = null;
+
+            for(Expression attribut : this.attributs) {
+                tmp = attribut.toIR(st, func);
+                ret.ir.append(tmp.ir);
+                attr.add(tmp.result);
+                attrTypes.put(tmp.result, tmp.type.toLlvmType());
+            }
+
+            Llvm.Instruction call = new Llvm.Call(result, identSymbol.returnType.toLlvmType(), "@" + this.ident, attr, attrTypes);
+
+            ret.ir.appendCode(call);
 
             return ret;
         }
@@ -1366,6 +1435,72 @@ public class ASD {
 
             ret.ir.append(retExpr.ir);
             ret.ir.appendCode(store);
+
+            return ret;
+        }
+    }
+
+    /**
+     * Représentation sous forme de classe interne du Constructeur FonctionInstruction
+     */
+    static public class FunctionInstruction extends Instruction {
+        /**
+         * Nom de la variable
+         */
+        String ident;
+        List<Expression> attributs;
+
+        /**
+         * Constructeur
+         * @param ident Nom de la variable dans l'expression
+         */
+        public FunctionInstruction(String ident, List<Expression> attributs) {
+            this.ident = ident;
+            this.attributs = attributs;
+        }
+
+        @Override
+        public String pp() {
+            String ret = this.ident + "(";
+
+            for(Expression attribut : this.attributs) {
+                ret += attribut.pp() + ", ";
+            }
+
+            return ret + ")";
+        }
+
+        @Override
+        public RetInstruction toIR(SymbolTable st, String func) throws TypeException {
+            SymbolTable.FunctionSymbol identSymbol = (SymbolTable.FunctionSymbol) st.lookup(this.ident);
+            String ident = "";
+
+            if(identSymbol == null) {// On check si on trouve la variable dans la table des symboles
+                System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");//TODO: si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                System.exit(0);
+            }
+
+            if(this.attributs.size() != identSymbol.arguments.size()) {
+                System.err.println("Error: number of parameters.");
+                System.exit(0);
+            }//Gestion des arguments de la fonction
+
+            Hashtable<String, Llvm.Type> attrTypes = new Hashtable<String, Llvm.Type>();
+            List<String> attr = new ArrayList<String>();
+
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), "");
+            Expression.RetExpression tmp = null;
+
+            for(Expression attribut : this.attributs) {
+                tmp = attribut.toIR(st, func);
+                ret.ir.append(tmp.ir);
+                attr.add(tmp.result);
+                attrTypes.put(tmp.result, tmp.type.toLlvmType());
+            }
+
+            Llvm.Instruction call = new Llvm.Call("", identSymbol.returnType.toLlvmType(), "@" + this.ident, attr, attrTypes);
+
+            ret.ir.appendCode(call);
 
             return ret;
         }

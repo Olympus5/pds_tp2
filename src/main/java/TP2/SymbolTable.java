@@ -104,8 +104,12 @@ public class SymbolTable {
     return res; // Either the symbol or null
   }
 
-  public Map getTable() {
-      return this.table;
+  /**
+   * Renvoie le nombre d'éléments dans la table des symboles
+   * @return Le nombre d'élements dans la table des symboles
+   */
+  public int size() {
+      return this.table.size();
   }
 
   @Override public boolean equals(Object obj) {

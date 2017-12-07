@@ -1,8 +1,9 @@
 package TP2;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 
 // This file contains a simple LLVM IR representation
 // and methods to generate its string representation
@@ -576,6 +577,65 @@ public class Llvm {
             }
 
             return ret + "){\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction Return sous forme de la classe interne
+     */
+    static public class Call extends Instruction {
+        /**
+         * La valeur retournée par la fonction
+         */
+        String lvalue;
+
+        /**
+         * le type de la fonction
+         */
+        Type returnType;
+
+        /**
+         * Le nom de la fonction
+         */
+        String name;
+
+        /**
+         * Liste d'attributs de la fonction
+         */
+        List<String> attributs;
+
+        /**
+         * Table des types des attributs
+         */
+        Hashtable<String, Type> types;
+
+        /**
+         * Constructeur
+         * @param lvalue Valeur retournée par la fonction
+         * @param returnType Type de la fonction
+         * @param name Nom de la fonction
+         * @param attributs Liste d'attributs de la fonction
+         * @param types Table des types (un types par nom d'attribut)
+         */
+        public Call(String lvalue, Type returnType, String name, List<String> attributs, Hashtable types) {
+            this.lvalue = lvalue;
+            this.returnType = returnType;
+            this.name = name;
+            this.attributs = attributs;
+            this.types = types;
+        }
+
+        @Override
+        public String toString() {
+            String attributs = null;
+            String ret = (this.lvalue.length() > 0) ? this.lvalue + " = " : "" ;
+
+            for(String attribut : this.attributs) {
+                if(attributs == null) attributs = this.types.get(attribut) + " " + attribut;
+                else attributs += ", " + this.types.get(attribut) + " " + attribut;
+            }
+
+            return ret + "call " + this.returnType + " " + this.name + "(" + attributs + ")\n";
         }
     }
 
