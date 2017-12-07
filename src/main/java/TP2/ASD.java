@@ -941,14 +941,19 @@ public class ASD {
      */
     static public class FunctionExpression extends Expression {
         /**
-         * Nom de la variable
+         * Nom de la fonction
          */
         String ident;
+
+        /**
+         * Valeurs des attributs
+         */
         List<Expression> attributs;
 
         /**
          * Constructeur
-         * @param ident Nom de la variable dans l'expression
+         * @param ident Nom de la fonction dans l'expression
+         * @param attributs Valeurs des attributs
          */
         public FunctionExpression(String ident, List<Expression> attributs) {
             this.ident = ident;
@@ -1445,14 +1450,19 @@ public class ASD {
      */
     static public class FunctionInstruction extends Instruction {
         /**
-         * Nom de la variable
+         * Nom de la fonction
          */
         String ident;
+
+        /**
+         * Valeurs des attributs
+         */
         List<Expression> attributs;
 
         /**
          * Constructeur
-         * @param ident Nom de la variable dans l'expression
+         * @param ident Nom de la fonction
+         * @param attributs Valeurs des attributs
          */
         public FunctionInstruction(String ident, List<Expression> attributs) {
             this.ident = ident;

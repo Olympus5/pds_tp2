@@ -72,7 +72,9 @@ public class Llvm {
             StringBuilder r = new StringBuilder("; Target\n" +
                 "target triple = \"x86_64-unknown-linux-gnu\"\n" +
                 "; External declaration of the printf function\n" +
-                "declare i32 @printf(i8* noalias nocapture, ...)\n" +
+                "declare i32 @printf(i8* nocapture, ...)\n" +
+                "; External declaration of the scanf function\n" +
+                "declare i32 @scanf(i8* nocapture, ...)\n" +
                 "\n; Actual code begins\n\n");
 
             for (Instruction inst: header)
@@ -86,6 +88,8 @@ public class Llvm {
             // TODO : remove this when you extend the language
             //r.append("define i32 @main() {\n");
 
+
+            //On déclare ici les fonctions externes: PRINTF et SCANF
 
             for (Instruction inst: code)
                 r.append(inst);

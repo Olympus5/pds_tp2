@@ -41,6 +41,8 @@ PROTO : 'PROTO';
 VOID : 'VOID';
 FUNC : 'FUNC';
 RETURN : 'RETURN';
+PRINT : 'PRINT';
+READ : 'READ';
 // TODO : other keywords
 
 // other tokens (no conflict with keywords in VSL)

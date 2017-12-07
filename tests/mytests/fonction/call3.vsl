@@ -1,0 +1,13 @@
+PROTO INT zero(n)
+
+FUNC VOID main() {
+    zero(10);
+}
+
+FUNC INT zero(n) {
+    IF n
+    THEN
+        RETURN zero(n-1)
+    ELSE
+        RETURN n
+}
