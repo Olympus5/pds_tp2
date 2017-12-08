@@ -1,0 +1,4 @@
+FUNC INT main() {
+    INT tab[11]
+    RETURN 10
+}

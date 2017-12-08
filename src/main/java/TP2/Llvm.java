@@ -133,9 +133,34 @@ public class Llvm {
         }
     }
 
-    static public class IntPtrType extends Type {
+    /**
+     * Représentation sous forme de class interne du type Array Llvm
+     */
+    static public class ArrayType extends Type {
+
+        /**
+         * Type Llvm des éléments du tableau
+         */
+        Type type;
+
+        /**
+         * Taille du tableau
+         */
+        int size;
+
+        /**
+         * Constructeur
+         * @param type Type Llvm des éléments du tableau
+         * @param size Taille des éléments du tableau
+         */
+        public ArrayType(Type type, int size) {
+            this.type = type;
+            this.size = size;
+        }
+
+        @Override
         public String toString() {
-            return "i32*";
+            return this.type + ", " + this.type + " " + this.size;
         }
     }
 

@@ -41,6 +41,8 @@ PROTO : 'PROTO';
 VOID : 'VOID';
 FUNC : 'FUNC';
 RETURN : 'RETURN';
+LB : '[';
+RB : ']';
 PRINT : 'PRINT';
 READ : 'READ';
 // TODO : other keywords

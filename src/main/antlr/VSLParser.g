@@ -37,8 +37,10 @@ bloc returns [ASD.Bloc out]
     ;
 
 variable returns [List<ASD.Variable> out]
-    : { $out = new ArrayList<ASD.Variable>(); } (INT (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
-                                                     (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })*)*
+    : { $out = new ArrayList<ASD.Variable>(); } (INT ((IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
+                                                | (IDENT LB INTEGER RB { $out.add(new ASD.ArrayVariable($IDENT.text, Integer.parseInt($INTEGER.text))); }))
+                                                (COMMA ((IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); })
+                                                | (IDENT LB INTEGER RB { $out.add(new ASD.ArrayVariable($IDENT.text, Integer.parseInt($INTEGER.text))); })))*)*
     ;
 
 instruction returns [List<ASD.Instruction> out] locals [List<ASD.Expression> attr, String nom]

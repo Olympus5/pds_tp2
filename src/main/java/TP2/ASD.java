@@ -5,6 +5,8 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.stream.Collectors;
 
+//TODO: Ne pas oublier les précondtions !!!!
+
 /**
  * @author Erwan IQUEL, Mathieu LE CLEC'H
  */
@@ -1121,6 +1123,60 @@ public class ASD {
     }
 
     /**
+     * Représenation sous forme de classe interne du Constructeur ArrayVariable
+     */
+    static public class ArrayVariable extends Variable {
+        /**
+         * Taille du tableau
+         */
+        int size;
+
+        /**
+         * Constructeur
+         * @param ident Le nom de la variable
+         * @param size Taille du tableau
+         */
+        public ArrayVariable(String ident, int size) {
+            super(ident);
+            this.size = size;
+        }
+
+        @Override
+        public String pp() {
+            return "" + super.ident + "[" + this.size + "]";
+        }
+
+        @Override
+        public RetVariable toIR(SymbolTable st, String func) {
+            SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);
+
+            if(funcSymbol != null) {
+                if(funcSymbol.arguments.lookup(super.ident) != null) {
+                    System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable of attributs.");
+                }
+            }
+
+            SymbolTable.VariableSymbol symbol = new SymbolTable.VariableSymbol(new IntType(), super.ident);
+            String result = "%" + super.ident;
+
+            RetVariable ret = new RetVariable(new Llvm.IR(Llvm.empty(), Llvm.empty()), new ArrayType(new IntType(), this.size), result);
+
+            if(!st.add(symbol)) {
+                System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
+            }
+
+            Llvm.Instruction alloca = new Llvm.Alloca(new ArrayType(new IntType(), this.size).toLlvmType(), result);
+
+            ret.ir.appendCode(alloca);
+
+            //TODO: supprimer lors de la mise en production (rendu final)
+            if(!symbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+
+            return ret;
+        }
+    }
+
+    /**
      * Représentation sous forme de classe interne du Variant Instruction
      */
     static public abstract class Instruction {
@@ -1575,22 +1631,46 @@ public class ASD {
     }
 
     /**
-     * Représentation du type entier coté ASD (Attention: ne pas confondre avec les types LLVM)
+     * Représentation du type tableau coté ASD (Attention: ne pas confondre avec les types LLVM)
      */
-    static class IntPtrType extends Type {
+    static class ArrayType extends Type {
+        /**
+         * Type des éléments du tableau
+         */
+        Type type;
+
+        /**
+         * Taille du tableau
+         */
+        int size;
+
+        /**
+         * Constructeur
+         * @param type Type des éléments du tableau
+         * @param size Taille des éléments du tableau
+         */
+        public ArrayType(Type type, int size) {
+            this.type = type;
+            this.size = size;
+        }
+
         @Override
         public String pp() {
-            return "INT";
+            return "";
         }
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof IntPtrType;
+            if(obj instanceof ArrayType) {
+                return ((ArrayType) obj).type.equals(this.type);
+            }
+
+            return false;
         }
 
         @Override
         public Llvm.Type toLlvmType() {
-            return new Llvm.IntPtrType();
+            return new Llvm.ArrayType(this.type.toLlvmType(), this.size);
         }
     }
 }
