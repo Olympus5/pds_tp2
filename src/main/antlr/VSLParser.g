@@ -68,6 +68,7 @@ factor returns [ASD.Expression out]
 primary returns [ASD.Expression out] locals [List<ASD.Expression> attr, String nom]
     : INTEGER { $out = new ASD.IntegerExpression($INTEGER.int); }//Constante dans une expression
     | IDENT { $out = new ASD.VariableExpression($IDENT.text); }//Variable dans une expression
+    | IDENT LB e=expression RB { $out = new ASD.ArrayExpression($IDENT.text, $e.out); }
     | { $attr = new ArrayList<ASD.Expression>(); } IDENT { $nom = $IDENT.text; } LP (e1=expression { $attr.add($e1.out); } (COMMA e2=expression { $attr.add($e2.out); })*)? RP { $out = new ASD.FunctionExpression($nom, $attr); }//Fonction dans une expression)*
     | LP e=expression RP { $out = $e.out; }//Expression entre parenthèses
     ;

@@ -1,0 +1,5 @@
+FUNC INT main() {
+    INT test, tab[11]
+    test := tab[2] + tab[test] + tab[(test - 3) * 4]
+    RETURN 10
+}

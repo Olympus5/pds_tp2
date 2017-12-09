@@ -367,7 +367,7 @@ public class Llvm {
     }
 
     /**
-     * Représentation de l'instruction Alloca sous la forme d'une classe interne
+     * Représentation de l'instruction Store sous la forme d'une classe interne
      */
     static public class Store extends Instruction {
         /**
@@ -407,7 +407,7 @@ public class Llvm {
     }
 
     /**
-     * Représentation de l'instruction Alloca sous la forme d'une classe interne
+     * Représentation de l'instruction Load sous la forme d'une classe interne
      */
     static public class Load extends Instruction {
 
@@ -444,6 +444,53 @@ public class Llvm {
         @Override
         public String toString() {
             return this.lvalue + " = load " + this.typeLValue + ", " + this.typePtr + "* " + this.ptr + "\n";
+        }
+    }
+
+    /**
+     * Représentation de l'instruction GetElementPtr sous la forme d'une classe interne
+     */
+    static public class GetElementPtr extends Instruction {
+
+        /**
+         * Variable intermediaire
+         */
+        String lvalue;
+
+        /**
+        * Type de la variable intermediaire
+        */
+        Type typeArray;
+
+        /**
+         * Nom de tableau
+         */
+        String array;
+
+        /**
+         * Type de la variable
+         */
+        Type type;
+
+        /**
+         * Variable
+         */
+        String index;
+
+        /**
+         * Constructeur
+         */
+        public GetElementPtr(String lvalue,  Type typeArray, String array, Type type, String index) {
+            this.lvalue = lvalue;
+            this.typeArray = typeArray;
+            this.array = array;
+            this.type = type;
+            this.index = index;
+        }
+
+        @Override
+        public String toString() {
+            return this.lvalue + " = getelementptr " + this.typeArray + "," + this.typeArray + "* " + this.array + ", " + this.type + " " + this.index + "\n";
         }
     }
 

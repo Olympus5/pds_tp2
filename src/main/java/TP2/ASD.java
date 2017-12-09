@@ -939,6 +939,78 @@ public class ASD {
     }
 
     /**
+     * Représentation sous forme de classe interne du Constructeur ArrayExpression
+     */
+    static public class ArrayExpression extends Expression {
+        /**
+         * Nom de la variable
+         */
+        String ident;
+
+        /**
+         * Position de l'élément dans le tableau
+         */
+        Expression index;
+
+        /**
+         * Constructeur
+         * @param ident Nom de la variable dans l'expression
+         * @param index Position de l'élément dans le tableau
+         */
+        public ArrayExpression(String ident, Expression index) {
+            this.ident = ident;
+            this.index = index;
+        }
+
+        @Override
+        public String pp() {
+            return "" + this.ident + "[" + this.index.pp() + "]";
+        }
+
+        @Override
+        public RetExpression toIR(SymbolTable st, String func) throws TypeException {
+            SymbolTable.VariableSymbol identSymbol = (SymbolTable.VariableSymbol) st.lookup(this.ident);
+            String ident = "";
+
+            if(identSymbol == null) {// On check si on trouve la variable dans la table des symboles
+                SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);//Si pas trouvé, on récupère la fonction dans la table des symboles
+
+                if(funcSymbol != null) {//Je dois renvoyer une erreur ???
+                    identSymbol = (SymbolTable.VariableSymbol) funcSymbol.arguments.lookup(this.ident);//On check dans sa table des attributs
+
+                    if(identSymbol == null) {//Message d'erreur si vrai
+                        System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the arguments table.");//TODO: si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                        System.exit(0);
+                    } else {
+                        ident = "%" + identSymbol.ident;
+                        ident += "1";//On récupère un argument (cf. poly TP2: code LLVM) !!!!
+                    }
+                }
+            } else {
+                ident = "%" + identSymbol.ident;
+            }
+
+            RetExpression indexExpr = this.index.toIR(st, func);
+
+            String tmp = "%\"" + this.ident + "[" + indexExpr.result + "]\"";
+            String result = Utils.newtmp();
+
+            System.err.println(identSymbol.type.pp());
+
+            RetExpression ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), ((ArrayType) identSymbol.type).type, result);
+            //TODO: Faire l'instruction GetElementPtr
+            Llvm.Instruction getElementPtr = new Llvm.GetElementPtr(tmp, ret.type.toLlvmType(), "%" + this.ident, indexExpr.type.toLlvmType(), indexExpr.result);
+            Llvm.Instruction load = new Llvm.Load(result, ret.type.toLlvmType(), ret.type.toLlvmType(), tmp);
+
+            ret.ir.append(indexExpr.ir);
+            ret.ir.appendCode(getElementPtr);
+            ret.ir.appendCode(load);
+
+            return ret;
+        }
+    }
+
+    /**
      * Représentation sous forme de classe interne du Constructeur FonctionExpression
      */
     static public class FunctionExpression extends Expression {
@@ -1156,7 +1228,7 @@ public class ASD {
                 }
             }
 
-            SymbolTable.VariableSymbol symbol = new SymbolTable.VariableSymbol(new IntType(), super.ident);
+            SymbolTable.VariableSymbol symbol = new SymbolTable.VariableSymbol(new ArrayType(new IntType(), this.size), super.ident);
             String result = "%" + super.ident;
 
             RetVariable ret = new RetVariable(new Llvm.IR(Llvm.empty(), Llvm.empty()), new ArrayType(new IntType(), this.size), result);
