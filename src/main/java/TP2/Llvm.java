@@ -160,7 +160,7 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return this.type + ", " + this.type + " " + this.size;
+            return this.type + "*";
         }
     }
 
@@ -362,7 +362,11 @@ public class Llvm {
 
         @Override
         public String toString() {
-            return this.ident + " = alloca " + this.type + "\n";
+            String ret = this.ident + " = alloca ";
+
+            ret += (this.type instanceof ArrayType) ? ((ArrayType) this.type).type + ", " + ((ArrayType) this.type).type + " " + ((ArrayType) this.type).size : "" + this.type;
+
+            return ret + "\n";
         }
     }
 
@@ -627,15 +631,22 @@ public class Llvm {
         List<String> attributs;
 
         /**
+         * Table des types des attributs
+         */
+        Hashtable<String, Type> typeAttributs;
+
+        /**
          * Constructeur
          * @param type Type de la fonction
          * @param name nom de la fonction
          * @param attributs Liste des attributs de la fonction
+         * @param typeAttributs Table des types des attributs
          */
-        public Define(Type type, String name, List<String> attributs) {
+        public Define(Type type, String name, List<String> attributs, Hashtable<String, Type> typeAttributs) {
             this.type = type;
             this.name = name;
             this.attributs = attributs;
+            this.typeAttributs = typeAttributs;
         }
 
         @Override
@@ -644,11 +655,13 @@ public class Llvm {
 
             if(!attributs.isEmpty()) {
                 Iterator<String> it = attributs.iterator();
+                String attribut = it.next();
 
-                ret += "i32 %" + it.next();
+                ret += this.typeAttributs.get(attribut) + " %" + attribut;
 
                 while(it.hasNext()) {
-                    ret += ", i32 %" + it.next();
+                    attribut = it.next();
+                    ret += ", " + this.typeAttributs.get(attribut) + " %" + attribut;
                 }
             }
 

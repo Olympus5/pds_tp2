@@ -87,13 +87,20 @@ public class ASD {
         List<String> attributs;
 
         /**
+         * Types des arguments de la fonction
+         */
+        Hashtable<String, Type> typeAttributs;
+
+        /**
          * Constructeur
          * @param ident Nom de la fonction
          * @param attrs Liste des attributs
+         * @param typeAttributs Types des arguments de la fonction
          */
-        public Prototype(String ident, List<String> attributs) {
+        public Prototype(String ident, List<String> attributs, Hashtable<String, Type> typeAttributs) {
             this.ident = ident;
             this.attributs = attributs;
+            this.typeAttributs = typeAttributs;
         }
 
         /**
@@ -157,8 +164,8 @@ public class ASD {
          * @param ident Nom de la fonction
          * @param attrs Liste des attributs
          */
-        public IntPrototype(String ident, List<String> attributs) {
-            super(ident, attributs);
+        public IntPrototype(String ident, List<String> attributs, Hashtable<String, Type> typeAttributs) {
+            super(ident, attributs, typeAttributs);
         }
 
         @Override
@@ -203,6 +210,8 @@ public class ASD {
         }
     }
 
+    //TODO: ne pas oublier de merge les constructeur de prototype
+
     /**
      * Représentation sous forme de classe interne du Constructeur VoidPrototype
      */
@@ -212,8 +221,8 @@ public class ASD {
          * @param ident Nom de la fonction
          * @param attrs Liste des attributs
          */
-        public VoidPrototype(String ident, List<String> attributs) {
-            super(ident, attributs);
+        public VoidPrototype(String ident, List<String> attributs, Hashtable<String, Type> typeAttributs) {
+            super(ident, attributs, typeAttributs);
         }
 
         @Override
@@ -364,6 +373,7 @@ public class ASD {
         @Override
         public RetFunction toIR(SymbolTable st) throws TypeException {
             SymbolTable.FunctionSymbol symbol = (SymbolTable.FunctionSymbol) st.lookup(super.ident);
+            Hashtable<String, Llvm.Type> typeAttributs = new Hashtable<String, Llvm.Type>();
 
             if(!super.ident.equals("main")) {//On verifie bien que la fonction est dans la table des symboles sauf pour le main
                 if(symbol == null) {
@@ -379,16 +389,19 @@ public class ASD {
                             System.err.println("Error: the symbol '" + attribut + "' doesn't exist in the attribut symbol table.");
                             System.exit(0);
                         }
+
+                        typeAttributs.put(attribut, ((SymbolTable.VariableSymbol) symbol.arguments.lookup(attribut)).type.toLlvmType());
                     }
                 }
             } else {
-                SymbolTable.FunctionSymbol mainSymbol = new SymbolTable.FunctionSymbol(new IntType(), super.ident, new SymbolTable(), true);
-                if(!st.add(mainSymbol)) {
+                symbol = new SymbolTable.FunctionSymbol(new IntType(), super.ident, new SymbolTable(), true);
+
+                if(!st.add(symbol)) {
                     System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
                 }
 
                 //TODO: supprimer lors de la mise en production (rendu final)
-                if(!mainSymbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+                if(!symbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
             }
 
             String name = "@" + super.ident;
@@ -396,9 +409,11 @@ public class ASD {
             String entryLabel = Utils.newlab("entry");
             String tmpRetour = Utils.newtmp();
 
-            RetFunction ret = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new IntType(), name);
 
-            Llvm.Instruction decl = new Llvm.Define(ret.type.toLlvmType(), ret.name, this.attributs);
+
+            RetFunction ret = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), symbol.returnType, name);
+
+            Llvm.Instruction decl = new Llvm.Define(ret.type.toLlvmType(), ret.name, this.attributs, typeAttributs);
             Llvm.Instruction entry = new Llvm.Label(entryLabel);
             Llvm.Instruction allocaRetour = new Llvm.Alloca(ret.type.toLlvmType(), result);
             Llvm.Instruction  loadRetour = new Llvm.Load(tmpRetour, ret.type.toLlvmType(), ret.type.toLlvmType(), result);
@@ -406,7 +421,7 @@ public class ASD {
             List<Llvm.Instruction> allocaAttributs = new ArrayList<Llvm.Instruction>();
 
             for(String attribut : super.attributs) {
-                allocaAttributs.add(new Llvm.Alloca(new IntType().toLlvmType(), "%" + attribut + "1"));
+                allocaAttributs.add(new Llvm.Alloca(((SymbolTable.VariableSymbol) symbol.arguments.lookup(attribut)).type.toLlvmType(), "%" + attribut + "1"));
             }
 
             Llvm.Instruction retour = new Llvm.Return(ret.type.toLlvmType(), tmpRetour);
@@ -456,6 +471,7 @@ public class ASD {
         @Override
         public RetFunction toIR(SymbolTable st) throws TypeException {
             SymbolTable.FunctionSymbol symbol = (SymbolTable.FunctionSymbol) st.lookup(super.ident);
+            Hashtable<String, Llvm.Type> typeAttributs = new Hashtable<String, Llvm.Type>();
 
             if(!super.ident.equals("main")) {//On verifie bien que la fonction est dans la table des symboles sauf pour le main
                 if(symbol == null) {
@@ -471,16 +487,19 @@ public class ASD {
                             System.err.println("Error: the symbol '" + super.ident + "' doesn't exist in the attribut symbol table.");
                             System.exit(0);
                         }
+
+                        typeAttributs.put(attribut, ((SymbolTable.VariableSymbol) symbol.arguments.lookup(attribut)).type.toLlvmType());
                     }
                 }
             } else {
-                SymbolTable.FunctionSymbol mainSymbol = new SymbolTable.FunctionSymbol(new VoidType(), super.ident, new SymbolTable(), true);
-                if(!st.add(mainSymbol)) {
+                symbol = new SymbolTable.FunctionSymbol(new VoidType(), super.ident, new SymbolTable(), true);
+
+                if(!st.add(symbol)) {
                     System.err.println("Warning: the symbol '" + super.ident + "' has already exist in SymbolTable in this scope.");
                 }
 
                 //TODO: supprimer lors de la mise en production (rendu final)
-                if(!mainSymbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
+                if(!symbol.equals(st.lookup(super.ident))) System.err.println("La variable '" + super.ident + "' doit être dans la table des symboles");
             }
 
             String name = "@" + super.ident;
@@ -488,13 +507,13 @@ public class ASD {
 
             RetFunction ret = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new VoidType(), name);
 
-            Llvm.Instruction decl = new Llvm.Define(ret.type.toLlvmType(), ret.name, this.attributs);
+            Llvm.Instruction decl = new Llvm.Define(ret.type.toLlvmType(), ret.name, this.attributs, typeAttributs);
             Llvm.Instruction entry = new Llvm.Label(entryLabel);
 
             List<Llvm.Instruction> varAttributs = new ArrayList<Llvm.Instruction>();
 
             for(String attribut : super.attributs) {
-                varAttributs.add(new Llvm.Alloca(new IntType().toLlvmType(), "%" + attribut + "1"));
+                varAttributs.add(new Llvm.Alloca(((SymbolTable.VariableSymbol) symbol.arguments.lookup(attribut)).type.toLlvmType(), "%" + attribut + "1"));
             }
 
             Llvm.Instruction retour = new Llvm.Return(ret.type.toLlvmType(), "");
@@ -992,13 +1011,13 @@ public class ASD {
 
             RetExpression indexExpr = this.index.toIR(st, func);
 
-            String tmp = "%\"" + this.ident + "[" + indexExpr.result + "]\"";
+            String tmp = Utils.newtmp();
             String result = Utils.newtmp();
 
             System.err.println(identSymbol.type.pp());
 
             RetExpression ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), ((ArrayType) identSymbol.type).type, result);
-            //TODO: Faire l'instruction GetElementPtr
+
             Llvm.Instruction getElementPtr = new Llvm.GetElementPtr(tmp, ret.type.toLlvmType(), "%" + this.ident, indexExpr.type.toLlvmType(), indexExpr.result);
             Llvm.Instruction load = new Llvm.Load(result, ret.type.toLlvmType(), ret.type.toLlvmType(), tmp);
 
@@ -1365,6 +1384,100 @@ public class ASD {
     }
 
     /**
+     * Représentation sous forme de classe interne du Constructeur AffInstruction
+     */
+    static public class AffArrayInstruction extends Instruction {
+        /**
+         * Nom de la variable à qui on affecte la partie droite de l'instruction
+         */
+        String ident;
+
+        /**
+         * Partie droite de l'affectation
+         */
+        Expression expression;
+
+        /**
+         * Index de la variable dans le tableau
+         */
+        Expression index;
+
+        /**
+         * Constructeur
+         * @param ident Le nom de la variable à qui on affection expression
+         * @param expression L'expression à affecter
+         * @param index Index de la variable dans le tableau
+         */
+        public AffArrayInstruction(String ident, Expression expression, Expression index) {
+            this.ident = ident;
+            this.expression = expression;
+            this.index = index;
+        }
+
+        @Override
+        public String pp() {
+            return this.ident + "[" + this.index.pp() + "] := " + this.expression.pp();
+        }
+
+        @Override
+        public RetInstruction toIR(SymbolTable st, String func) throws TypeException {
+            SymbolTable.VariableSymbol identSymbol = (SymbolTable.VariableSymbol) st.lookup(this.ident);
+            String ident = "";
+
+            if(identSymbol == null) {// On check si on trouve la variable dans la table des symboles
+                SymbolTable.FunctionSymbol funcSymbol = (SymbolTable.FunctionSymbol) st.lookup(func);//Si pas trouvé, on récupère la fonction dans la table des symboles
+
+                if(funcSymbol != null) {//Je dois renvoyer une erreur ???
+                    identSymbol = (SymbolTable.VariableSymbol) funcSymbol.arguments.lookup(this.ident);//On check dans sa table des attributs
+
+                    if(identSymbol == null) {//Message d'erreur si vrai
+                        System.err.println("Error: the symbol '" + this.ident + "' doesn't exist in the symbol table.");//si il n'est pas dans la table symb ça se peut que ce soit un attribut d'une fonction
+                        System.exit(0);
+                    } else {
+                        ident = "%" + identSymbol.ident;
+                        ident += "1"; // On récupère un argument (cf. poly TP2: code LLVM) !!!!
+                    }
+                }
+            } else {
+                ident = "%" + identSymbol.ident;
+            }
+
+            Expression.RetExpression retExpr = this.expression.toIR(st, func);
+            Expression.RetExpression retIndex = this.index.toIR(st, func);
+
+            Type typeTmp = null;
+
+            if(identSymbol.type instanceof ArrayType) {
+                typeTmp = ((ArrayType) identSymbol.type).type;
+            }
+
+            if (!retExpr.type.equals(typeTmp)) {
+                throw new TypeException("type mismatch: have " + identSymbol.type + " and " + retExpr.type);
+            }
+
+
+            if (!new IntType().equals(retIndex.type)) {
+                throw new TypeException("type mismatch: have " + retIndex.type + " and " + new IntType());
+            }
+
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), ident);
+
+            ret.ir.append(retExpr.ir);
+            ret.ir.append(retIndex.ir);
+
+            String tmp = Utils.newtmp();
+
+            Llvm.Instruction getElementPtr = new Llvm.GetElementPtr(tmp, typeTmp.toLlvmType(), "%" + this.ident, retIndex.type.toLlvmType(), retIndex.result);
+            Llvm.Instruction store = new Llvm.Store(retExpr.type.toLlvmType(), retExpr.result, retExpr.type.toLlvmType(), tmp);
+
+            ret.ir.appendCode(getElementPtr);
+            ret.ir.appendCode(store);
+
+            return ret;
+        }
+    }
+
+    /**
      * Représentation sous forme de classe interne du Constructeur IfElseInstruction
      */
     static public class IfElseInstruction extends Instruction {
@@ -1716,6 +1829,11 @@ public class ASD {
          */
         int size;
 
+        public ArrayType(Type type) {
+            this.type = type;
+            this.size = -1;
+        }
+
         /**
          * Constructeur
          * @param type Type des éléments du tableau
@@ -1726,9 +1844,13 @@ public class ASD {
             this.size = size;
         }
 
+        public void setSize(int size) {
+            this.size = size;
+        }
+
         @Override
         public String pp() {
-            return "";
+            return "[]";
         }
 
         @Override
@@ -1743,6 +1865,24 @@ public class ASD {
         @Override
         public Llvm.Type toLlvmType() {
             return new Llvm.ArrayType(this.type.toLlvmType(), this.size);
+        }
+    }
+
+    static class StringType extends Type {
+
+        @Override
+        public String pp() {
+            return "STRING";
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof StringType;
+        }
+
+        @Override
+        public Llvm.Type toLlvmType() {
+            return null;//TODO: à mettre à jour
         }
     }
 }

@@ -1,0 +1,16 @@
+PROTO INT zero(n)
+
+FUNC VOID main() {
+    INT test, tab[2]
+    zero(10);
+    test := 10
+    tab[1] := test - 2
+}
+
+FUNC INT zero(n) {
+    IF n
+    THEN
+        RETURN zero(n-1)
+    ELSE
+        RETURN n
+}

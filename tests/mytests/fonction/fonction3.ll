@@ -1,7 +1,9 @@
 ; Target
 target triple = "x86_64-unknown-linux-gnu"
 ; External declaration of the printf function
-declare i32 @printf(i8* noalias nocapture, ...)
+declare i32 @printf(i8* nocapture, ...)
+; External declaration of the scanf function
+declare i32 @scanf(i8* nocapture, ...)
 
 ; Actual code begins
 

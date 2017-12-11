@@ -10,6 +10,7 @@ options {
 
   import java.util.stream.Collectors;
   import java.util.Arrays;
+  import java.util.Hashtable;
 }
 
 
@@ -19,9 +20,17 @@ program returns [ASD.Program out]
     : p=prototype f=function EOF { $out = new ASD.Program($p.out, $f.out); } // TODO : change when you extend the language
     ;
 
-prototype returns [List<ASD.Prototype> out] locals [List<String> attr, String nom]
-    : { $out = new ArrayList(); } ({ $attr = new ArrayList<String>(); } (PROTO INT IDENT { $nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP { $out.add(new ASD.IntPrototype($nom, $attr)); }//TODO: Ajouter variable
-                                                | PROTO VOID IDENT { $nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP { $out.add(new ASD.VoidPrototype($nom, $attr)); }))*
+prototype returns [List<ASD.Prototype> out] locals [List<String> attr, String nom, Hashtable<String, ASD.Type> typeAttr]
+    : { $out = new ArrayList(); }
+        ({ $attr = new ArrayList<String>(); $typeAttr = new Hashtable<String, ASD.Type>(); }
+        (PROTO INT IDENT { $nom = $IDENT.text; }
+            LP ((IDENT { $attr.add($IDENT.text); } (LB RB { $typeAttr.put($IDENT.text, new ASD.ArrayType(new ASD.IntType())); } | { $typeAttr.put($IDENT.text, new ASD.IntType()); }))
+            (COMMA IDENT { $attr.add($IDENT.text); } (LB RB { $typeAttr.put($IDENT.text, new ASD.ArrayType(new ASD.IntType())); } | { $typeAttr.put($IDENT.text, new ASD.IntType()); }))*)? RP
+                { $out.add(new ASD.IntPrototype($nom, $attr, $typeAttr)); }//TODO: Ajouter variable
+        | PROTO VOID IDENT { $nom = $IDENT.text; }
+        LP ((IDENT { $attr.add($IDENT.text); } (LB RB { $typeAttr.put($IDENT.text, new ASD.ArrayType(new ASD.IntType())); } | { $typeAttr.put($IDENT.text, new ASD.IntType()); }))
+        (COMMA IDENT { $attr.add($IDENT.text); } (LB RB { $typeAttr.put($IDENT.text, new ASD.ArrayType(new ASD.IntType())); } | { $typeAttr.put($IDENT.text, new ASD.IntType()); }))*)? RP
+                { $out.add(new ASD.VoidPrototype($nom, $attr, $typeAttr)); }))*
     ;
 
 function returns [List<ASD.Function> out] locals [List<String> attr, String nom, String type]
@@ -45,6 +54,7 @@ variable returns [List<ASD.Variable> out]
 
 instruction returns [List<ASD.Instruction> out] locals [List<ASD.Expression> attr, String nom]
     : { $out = new ArrayList<ASD.Instruction>(); } (IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }//Affectation
+                                                    | IDENT LB e1=expression RB AFF e2=expression { $out.add(new ASD.AffArrayInstruction($IDENT.text, $e2.out, $e1.out)); }//Affectation array
                                                     | IF e=expression THEN b=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b.out, null)); }//If
                                                     | IF e=expression THEN b1=bloc ELSE b2=bloc FI { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); }//If Else
                                                     | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); }//While

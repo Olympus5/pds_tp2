@@ -11,7 +11,10 @@ declare i32 @scanf(i8* nocapture, ...)
 
 define void @main(){
 entry1: 
-call void @fact(i32 10)
+%test = alloca i32, i32 4
+%tmp1 = getelementptr i32,i32* %test, i32 0
+%tmp2 = load i32, i32* %tmp1
+call void @fact(i32 %tmp2)
 ret void 
 }
 
@@ -19,8 +22,8 @@ define void @fact(i32 %n){
 entry2: 
 %n1 = alloca i32
 %test = alloca i32
-%tmp1 = load i32, i32* %n1
-store i32 %tmp1, i32* %test
+%tmp3 = load i32, i32* %n1
+store i32 %tmp3, i32* %test
 ret void 
 }
 
